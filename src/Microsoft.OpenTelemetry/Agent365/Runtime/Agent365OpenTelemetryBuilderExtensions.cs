@@ -120,17 +120,19 @@ internal static class Agent365OpenTelemetryBuilderExtensions
             // Agent365 Exporter (enabled when not skipped)
             if (!options.SkipExporter)
             {
+                // Always register the token cache so DI consumers (e.g., agents
+                // injecting IExporterTokenCache<AgenticTokenStruct>) can resolve it.
+                // This matches the base A365 SDK behavior where AddAgenticTracingExporter()
+                // and setting TokenResolver are independent operations.
+                builder.Services.AddAgenticTracingExporter();
+
                 if (options.Exporter.TokenResolver != null)
                 {
-                    // Inline TokenResolver provided — register options directly in DI
+                    // Inline TokenResolver provided — override the cache-based options.
+                    // This singleton takes precedence over the one from AddAgenticTracingExporter().
                     builder.Services.AddSingleton(options.Exporter);
                 }
-                else
-                {
-                    // No inline TokenResolver — register agentic token cache and options in DI.
-                    // Token cache is populated by agent middleware (e.g. via RegisterObservability).
-                    builder.Services.AddAgenticTracingExporter();
-                }
+
                 tracing.AddAgent365Exporter();
             }
             });

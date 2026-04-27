@@ -2,7 +2,7 @@
 
 A unified OpenTelemetry distribution for .NET. One-line onboarding for ASP.NET Core apps, [Microsoft Agent Framework](https://github.com/microsoft/agent-framework), and [Agent365](https://learn.microsoft.com/en-us/microsoft-agent-365/) — Microsoft's managed observability backend for AI agents.
 
-**Targets:** `net8.0`, `net10.0`
+**Targets:** `net8.0`, `netstandard2.0`
 
 ## Install
 

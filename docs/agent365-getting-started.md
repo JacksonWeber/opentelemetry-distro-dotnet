@@ -154,6 +154,43 @@ builder.UseMicrosoftOpenTelemetry(o =>
 });
 ```
 
+### Agent365-only mode — infrastructure instrumentation suppressed by default
+
+When Agent365 is the **only real exporter** (with or without Console), the distro automatically suppresses infrastructure instrumentation (ASP.NET Core, HttpClient, SQL Client, Azure SDK) because Agent365 only exports gen_ai/agent spans — infrastructure spans have nowhere to go and waste CPU.
+
+This applies when:
+- `o.Exporters = ExportTarget.Agent365` (with or without `| ExportTarget.Console`)
+- Azure Monitor and OTLP are **not** enabled
+
+The following instrumentations are disabled automatically:
+
+| Instrumentation | Default (normal) | Agent365-only mode |
+|---|---|---|
+| ASP.NET Core | `true` | **`false`** |
+| HttpClient | `true` | **`false`** |
+| SQL Client | `true` | **`false`** |
+| Azure SDK | `true` | **`false`** |
+| OpenAI / Azure OpenAI | `true` | `true` (kept) |
+| Semantic Kernel | `true` | `true` (kept) |
+| Agent Framework | `true` | `true` (kept) |
+| Agent365 scopes | `true` | `true` (kept) |
+
+GenAI and agent instrumentation is **always kept** — only noisy infrastructure instrumentation is suppressed.
+
+To re-enable specific instrumentations in Agent365-only mode, set them explicitly in the callback **before** they are suppressed:
+
+```csharp
+builder.UseMicrosoftOpenTelemetry(o =>
+{
+    o.Exporters = ExportTarget.Agent365 | ExportTarget.Console;
+
+    // Re-enable HttpClient instrumentation despite A365-only mode
+    o.Instrumentation.EnableHttpClientInstrumentation = true;
+});
+```
+
+> **Note:** When you add `ExportTarget.AzureMonitor` or `ExportTarget.Otlp`, all infrastructure instrumentation is enabled by default — no suppression occurs.
+
 ## Token resolver
 
 When using the Agent 365 exporter, you must provide a token resolver function that returns an authentication token. The distro supports two approaches.

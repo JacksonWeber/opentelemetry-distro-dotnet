@@ -230,12 +230,12 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                 builder.WithTracing(tracing => tracing.AddConsoleExporter());
             }
 
-            if (effectiveInstrumentation.EnableMetrics && !consoleTracesOnly)
+            if (effectiveInstrumentation.EnableMetrics && (!consoleTracesOnly || options.Instrumentation.MetricsExplicitlySet))
             {
                 builder.WithMetrics(metrics => metrics.AddConsoleExporter());
             }
 
-            if (effectiveInstrumentation.EnableLogging && !consoleTracesOnly)
+            if (effectiveInstrumentation.EnableLogging && (!consoleTracesOnly || options.Instrumentation.LoggingExplicitlySet))
             {
                 builder.WithLogging(logging => logging.AddConsoleExporter());
             }

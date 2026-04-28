@@ -1554,6 +1554,36 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
             Assert.Contains(exportedActivities, a =>
                 a.Source.Name == "Agent365Sdk");
         }
+
+        // ── Explicit metrics/logging override tracking ──
+
+        [Fact]
+        public void MetricsExplicitlySet_FalseByDefault()
+        {
+            var options = new InstrumentationOptions();
+            Assert.False(options.MetricsExplicitlySet);
+        }
+
+        [Fact]
+        public void MetricsExplicitlySet_TrueAfterAssignment()
+        {
+            var options = new InstrumentationOptions { EnableMetrics = true };
+            Assert.True(options.MetricsExplicitlySet);
+        }
+
+        [Fact]
+        public void LoggingExplicitlySet_FalseByDefault()
+        {
+            var options = new InstrumentationOptions();
+            Assert.False(options.LoggingExplicitlySet);
+        }
+
+        [Fact]
+        public void LoggingExplicitlySet_TrueAfterAssignment()
+        {
+            var options = new InstrumentationOptions { EnableLogging = true };
+            Assert.True(options.LoggingExplicitlySet);
+        }
     }
 }
 

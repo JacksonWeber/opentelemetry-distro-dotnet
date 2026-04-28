@@ -10,6 +10,8 @@ namespace Microsoft.OpenTelemetry;
 public class InstrumentationOptions
 {
     // Backing fields to track explicit user assignment vs defaults.
+    private bool? _enableMetrics;
+    private bool? _enableLogging;
     private bool? _enableAspNetCoreInstrumentation;
     private bool? _enableHttpClientInstrumentation;
     private bool? _enableSqlClientInstrumentation;
@@ -28,7 +30,11 @@ public class InstrumentationOptions
     /// Gets or sets a value indicating whether the metrics pipeline is enabled.
     /// When <c>false</c>, no <c>MeterProvider</c> is configured. Default: <c>true</c>.
     /// </summary>
-    public bool EnableMetrics { get; set; } = true;
+    public bool EnableMetrics
+    {
+        get => _enableMetrics ?? true;
+        set => _enableMetrics = value;
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether OpenTelemetry log export is enabled.
@@ -38,7 +44,11 @@ public class InstrumentationOptions
     /// Other logging providers (console logger, file logger, etc.) are not affected.
     /// Default: <c>true</c>.
     /// </summary>
-    public bool EnableLogging { get; set; } = true;
+    public bool EnableLogging
+    {
+        get => _enableLogging ?? true;
+        set => _enableLogging = value;
+    }
 
     // ── Auto-instrumentation libraries ──
 
@@ -93,6 +103,16 @@ public class InstrumentationOptions
         _enableSqlClientInstrumentation ??= false;
         _enableAzureSdkInstrumentation ??= false;
     }
+
+    /// <summary>
+    /// Returns <c>true</c> if <see cref="EnableMetrics"/> was explicitly assigned.
+    /// </summary>
+    internal bool MetricsExplicitlySet => _enableMetrics.HasValue;
+
+    /// <summary>
+    /// Returns <c>true</c> if <see cref="EnableLogging"/> was explicitly assigned.
+    /// </summary>
+    internal bool LoggingExplicitlySet => _enableLogging.HasValue;
 
     // ── GenAI / Agent instrumentation libraries ──
 

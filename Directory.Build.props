@@ -17,6 +17,17 @@
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)target\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
+  <!-- Source Link & deterministic builds -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true' or '$(GITHUB_ACTIONS)' == 'true' or '$(CI)' == 'true' or '$(PublicRelease)' == 'True'">true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
   <!-- Strong-name signing -->
   <PropertyGroup>
     <KeysRoot>$(MSBuildThisFileDirectory).keys</KeysRoot>

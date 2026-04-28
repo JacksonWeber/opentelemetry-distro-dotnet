@@ -30,6 +30,7 @@
   <!-- Public API tracking -->
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
     <AdditionalFiles Include=".publicApi\PublicAPI.Shipped.txt" />
     <AdditionalFiles Include=".publicApi\PublicAPI.Unshipped.txt" />
   </ItemGroup>

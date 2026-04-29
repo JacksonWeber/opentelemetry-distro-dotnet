@@ -2,15 +2,15 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # ─── Default (repo-level) ──────────────────────────────────────────────
-*                                                    @harsimar @rajkumar-rangaraj @xiang17
+*                                                    @harsimar @rajkumar-rangaraj @xiang17 @rads-1996
 
 # ─── Agent365 (src only) ───────────────────────────────────────────────
-src/Microsoft.OpenTelemetry/Agent365/                @harsimar @rajkumar-rangaraj @xiang17 @fpfp100 @nikhilNava @juliomenendez @alexlu4250
+src/Microsoft.OpenTelemetry/Agent365/                @harsimar @rajkumar-rangaraj @xiang17 @rads-1996 @fpfp100 @nikhilNava @juliomenendez @alexlu4250
 
 # ─── Agent Framework (src only) ────────────────────────────────────────
-src/Microsoft.OpenTelemetry/AgentFramework/          @harsimar @rajkumar-rangaraj @xiang17 @TaoChenOSU
+src/Microsoft.OpenTelemetry/AgentFramework/          @harsimar @rajkumar-rangaraj @xiang17 @rads-1996 @TaoChenOSU
 
 # ─── Shared areas (all contributors) ──────────────────────────────────
-docs/                                                @harsimar @rajkumar-rangaraj @xiang17 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU
-test/                                                @harsimar @rajkumar-rangaraj @xiang17 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU
-examples/                                            @harsimar @rajkumar-rangaraj @xiang17 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU
+docs/                                                @harsimar @rajkumar-rangaraj @xiang17 @rads-1996 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU
+test/                                                @harsimar @rajkumar-rangaraj @xiang17 @rads-1996 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU
+examples/                                            @harsimar @rajkumar-rangaraj @xiang17 @rads-1996 @fpfp100 @nikhilNava @juliomenendez @alexlu4250 @TaoChenOSU

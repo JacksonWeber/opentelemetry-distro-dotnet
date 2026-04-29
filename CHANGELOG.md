@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-beta.2
+
+### Bug Fixes
+
+- Fix explicit `EnableMetrics`/`EnableLogging` flags being ignored in A365-only Console mode (#58)
+- Fix `InternalsVisibleTo` assembly signing for conditional build configurations (#48)
+
+### Documentation
+
+- Added custom `ActivitySource` migration guidance for Agent Framework (#52, PR #54)
+
 ## 1.0.0-beta.1
 
 ### Features

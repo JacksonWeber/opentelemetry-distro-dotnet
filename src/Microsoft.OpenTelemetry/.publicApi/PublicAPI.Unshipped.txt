@@ -389,6 +389,13 @@ Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOp
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.TokenResolver.set -> void
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.UseS2SEndpoint.get -> bool
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.UseS2SEndpoint.set -> void
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.DefaultEndpointHost = "agent365.svc.cloud.microsoft" -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.MaxPayloadBytes.get -> long
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions.MaxPayloadBytes.set -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.PayloadChunking
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.PayloadChunking.EstimateValueBytes(object? value) -> long
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.PayloadChunking.EstimateActivityBytes(System.Diagnostics.Activity! activity) -> long
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.PayloadChunking.ChunkBySize<T>(System.Collections.Generic.IEnumerable<T>! items, System.Func<T, long>! getSize, long maxChunkBytes) -> System.Collections.Generic.List<System.Collections.Generic.List<T>!>!
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterType
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterType.Agent365Exporter = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterType
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterType.Agent365ExporterAsync = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterType

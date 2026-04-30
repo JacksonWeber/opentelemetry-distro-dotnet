@@ -10,7 +10,7 @@
 
     <!-- NuGet packaging -->
     <PackageId>Microsoft.OpenTelemetry</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>See CHANGELOG.md for release notes.</PackageReleaseNotes>
@@ -49,6 +49,12 @@
 
     <!-- Agent365 extensions (PrivateAssets=all: compile-time only, not propagated to consumers) -->
     <PackageReference Include="Microsoft.Agents.Builder" PrivateAssets="all" />
+
+    <!-- Microsoft.Agents.Builder (PrivateAssets=all) compiles against 10.x Microsoft.Extensions.*
+         but suppresses transitive flow. On net8.0, the shared framework only has 8.x assemblies.
+         These explicit dependencies ensure the 10.x assemblies are available at runtime. -->
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
 
 </Project>

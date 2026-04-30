@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 - 2026-05-01
+
+- Add explicit `Microsoft.Extensions.Logging` and `Microsoft.Extensions.Configuration.Binder` dependencies for net8.0 runtime compatibility
+
 ## 1.0.0 - 2026-05-01
 
 First stable release of the Microsoft OpenTelemetry distro for .NET.

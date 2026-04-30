@@ -275,6 +275,55 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 - [Microsoft.OpenTelemetry.Agent365.Demo](examples/Microsoft.OpenTelemetry.Agent365.Demo) — Agent Framework app → Agent365
 - [Microsoft.OpenTelemetry.AgentFramework.Demo](examples/Microsoft.OpenTelemetry.AgentFramework.Demo) — Agent Framework → OTLP / Azure Monitor
 
+## AI-Assisted Setup & Migration Skills
+
+The `skills/` folder contains portable skills that help AI coding agents set up or migrate to the Microsoft OpenTelemetry distro.
+
+### What They Do
+
+- **`microsoft-opentelemetry-setup`**: Guides new setup for ASP.NET Core, Console, and Agent Framework apps — covers exporters, token resolver, baggage, and instrumentation options
+- **`microsoft-opentelemetry-migration`**: Walks through A365 Observability SDK → distro migration with code change detection, package swap, and validation checklist
+
+### Installation by Agent
+
+**GitHub Copilot:**
+```bash
+cp -r skills/microsoft-opentelemetry-setup .github/skills/microsoft-opentelemetry-setup
+cp -r skills/microsoft-opentelemetry-migration .github/skills/microsoft-opentelemetry-migration
+```
+Copilot discovers skills in `.github/skills/` automatically. Works with Copilot coding agent and agent mode in VS Code.
+
+**Claude Code:**
+```bash
+cp -r skills/microsoft-opentelemetry-setup .claude/skills/microsoft-opentelemetry-setup
+cp -r skills/microsoft-opentelemetry-migration .claude/skills/microsoft-opentelemetry-migration
+```
+
+**Cursor:**
+```bash
+cp -r skills/microsoft-opentelemetry-setup .cursor/skills/microsoft-opentelemetry-setup
+cp -r skills/microsoft-opentelemetry-migration .cursor/skills/microsoft-opentelemetry-migration
+```
+
+**Codex:**
+```bash
+cp -r skills/microsoft-opentelemetry-setup .agents/skills/microsoft-opentelemetry-setup
+cp -r skills/microsoft-opentelemetry-migration .agents/skills/microsoft-opentelemetry-migration
+```
+
+**Other agents:**
+Copy the `skills/` folders into your project's agent skills directory. If your agent doesn't support the Agent Skills standard, copy the `references/` markdown files into whatever instruction mechanism your agent uses.
+
+### Usage
+
+Once installed, ask your AI coding agent:
+- "Add observability to my agent"
+- "Set up Microsoft.OpenTelemetry"
+- "Migrate from A365 SDK to the distro"
+- "Configure Agent 365 export"
+
+The skill automatically detects your app type and provides the correct guidance.
+
 ## Build & test
 
 ```bash

@@ -129,6 +129,11 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
             Assert.True(attrs.ContainsKey("telemetry.distro.name"),
                 "Expected distro to add telemetry.distro.name attribute.");
             Assert.Equal("Microsoft.OpenTelemetry", attrs["telemetry.distro.name"]);
+
+            Assert.True(attrs.ContainsKey("telemetry.distro.version"),
+                "Expected distro to add telemetry.distro.version attribute.");
+            Assert.False(string.IsNullOrEmpty(attrs["telemetry.distro.version"]?.ToString()),
+                "telemetry.distro.version should not be empty.");
         }
 
         /// <summary>
@@ -181,6 +186,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
 
             // Distro attribute also present
             Assert.Equal("Microsoft.OpenTelemetry", attrs["telemetry.distro.name"]);
+            Assert.False(string.IsNullOrEmpty(attrs["telemetry.distro.version"]?.ToString()),
+                "telemetry.distro.version should not be empty.");
         }
 
         /// <summary>
@@ -230,6 +237,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
             Assert.Equal("3.0.0", attrs["service.version"]);
             Assert.Equal("Staging", attrs["deployment.environment"]);
             Assert.Equal("Microsoft.OpenTelemetry", attrs["telemetry.distro.name"]);
+            Assert.False(string.IsNullOrEmpty(attrs["telemetry.distro.version"]?.ToString()),
+                "telemetry.distro.version should not be empty.");
         }
 
         /// <summary>
@@ -281,6 +290,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
             Assert.Equal("4.0.0", attrs["service.version"]);
             Assert.Equal("QA", attrs["deployment.environment"]);
             Assert.Equal("Microsoft.OpenTelemetry", attrs["telemetry.distro.name"]);
+            Assert.False(string.IsNullOrEmpty(attrs["telemetry.distro.version"]?.ToString()),
+                "telemetry.distro.version should not be empty.");
         }
 
         /// <summary>
@@ -332,10 +343,12 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests
             Assert.Equal("5.0.0", attrs["service.version"]);
             Assert.Equal("Integration", attrs["deployment.environment"]);
             Assert.Equal("Microsoft.OpenTelemetry", attrs["telemetry.distro.name"]);
+            Assert.False(string.IsNullOrEmpty(attrs["telemetry.distro.version"]?.ToString()),
+                "telemetry.distro.version should not be empty.");
         }
 
         /// <summary>
-        /// Verifies that calling .Clear() on the ResourceBuilder before setting custom
+        /// Verifies that calling .Clear() on the ResourceBuilderbefore setting custom
         /// attributes still results in user attributes being present and service.name
         /// is not the default unknown_service value.
         /// </summary>

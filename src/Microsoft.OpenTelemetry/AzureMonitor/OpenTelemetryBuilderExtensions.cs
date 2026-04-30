@@ -92,7 +92,11 @@ namespace Microsoft.OpenTelemetry
             }
 
             Action<ResourceBuilder> configureResource = (r) => r
-                .AddAttributes(new[] { new KeyValuePair<string, object>("telemetry.distro.name", "Microsoft.OpenTelemetry") })
+                .AddAttributes(new[]
+                {
+                    new KeyValuePair<string, object>("telemetry.distro.name", "Microsoft.OpenTelemetry"),
+                    new KeyValuePair<string, object>("telemetry.distro.version", SdkVersion.Value),
+                })
                 .AddDetector(new AppServiceResourceDetector())
                 .AddDetector(new AzureVMResourceDetector())
                 .AddDetector(new AzureContainerAppsResourceDetector());

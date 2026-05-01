@@ -26,7 +26,7 @@ Your .NET app doesn't connect to Fabric directly. Instead, it sends telemetry to
 - Azure CLI installed and logged in (`az login`) — used for authentication
 - The `Microsoft.OpenTelemetry` NuGet package (installed in Step 3)
 
-> **Tip:** Before connecting to Fabric, you can verify your app emits telemetry correctly using the [Aspire Dashboard](aspire-dashboard.md) — a free, local viewer for traces, metrics, and logs. Once validated, stop the dashboard (`docker stop aspire-dashboard`) and continue with the steps below.
+> **Tip:** Before connecting to Fabric, you can verify your app emits telemetry correctly using the [Aspire Dashboard](aspire-dashboard-getting-started.md) — a free, local viewer for traces, metrics, and logs. Once validated, stop the dashboard (`docker stop aspire-dashboard`) and continue with the steps below.
 
 ## Step 1: Create target tables
 
@@ -52,16 +52,16 @@ The collector needs permission to write data into your database. Run one of thes
 **For local development** (uses your Azure CLI identity):
 
 ```kql
-.add database MyDatabase ingestors ('aaduser=you@yourdomain.com') 'Dev testing'
+.add database <yourdbname> ingestors ('aaduser=you@yourdomain.com') 'Dev testing'
 ```
 
 **For production** (uses a service principal):
 
 ```kql
-.add database MyDatabase ingestors ('aadapp=<ApplicationID>') 'OTel Collector'
+.add database <yourdbname> ingestors ('aadapp=<ApplicationID>') 'OTel Collector'
 ```
 
-> Replace `MyDatabase` with your actual database name, and `<ApplicationID>` with the client ID from your [Entra app registration](https://learn.microsoft.com/en-us/azure/data-explorer/provision-entra-id-app?tabs=portal).
+> Replace `<yourdbname>` with your actual database name, and `<ApplicationID>` with the client ID from your [Entra app registration](https://learn.microsoft.com/en-us/azure/data-explorer/provision-entra-id-app?tabs=portal).
 
 ## Step 3: Create a .NET app with the distro
 
@@ -90,13 +90,43 @@ app.MapGet("/", () => "Hello from distro → Fabric!");
 app.Run();
 ```
 
-That's it for the app. `UseMicrosoftOpenTelemetry` automatically instruments HTTP requests, captures logs, and collects metrics. Setting `ExportTarget.Otlp` sends everything to `http://localhost:4317` (the collector) via the OTLP protocol.
+That's it for the app. `UseMicrosoftOpenTelemetry` automatically instruments HTTP requests, captures logs, and collects metrics. Setting `ExportTarget.Otlp` sends everything to the collector via the OTLP/gRPC protocol.
 
-> **Remote collector?** Set the environment variable `OTEL_EXPORTER_OTLP_ENDPOINT=http://<collector-host>:4317` before running the app.
+By default, the OTLP exporter sends to `http://localhost:4317` (gRPC). To override the endpoint, set the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable:
 
-## Step 4: Configure the OpenTelemetry Collector
+```bash
+# Remote collector or TLS
+OTEL_EXPORTER_OTLP_ENDPOINT=https://<collector-host>:4317
+```
 
-The collector sits between your app and Fabric/ADX. Create a file called `collector-config.yaml` in your project directory:
+> **gRPC vs HTTP:** The distro uses OTLP/gRPC (port 4317) by default. To use OTLP/HTTP (port 4318) instead, also set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`.
+
+## Step 4: Download the OpenTelemetry Collector
+
+The collector is a standalone process that receives OTLP data from your app and forwards it to Fabric/ADX. You need the **contrib** distribution (which includes the Azure Data Explorer exporter).
+
+> **Important:** If you're running the [Aspire Dashboard](aspire-dashboard-getting-started.md), stop it first — both use port 4317:
+> ```bash
+> docker stop aspire-dashboard
+> ```
+
+### Option A: Binary (recommended for getting started)
+
+Download **otelcol-contrib** version **0.121.0** (or later) for your OS from [OTel Collector Contrib releases](https://github.com/open-telemetry/opentelemetry-collector-releases/releases) (look for `otelcol-contrib_*` assets).
+
+### Option B: Docker
+
+```bash
+docker pull otel/opentelemetry-collector-contrib:0.121.0
+```
+
+### Option C: Kubernetes
+
+For production deployments, see the [Azure Data Explorer exporter docs](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/azuredataexplorerexporter) for Kubernetes examples using Workload Identity.
+
+## Step 5: Configure the collector
+
+Create a file called `collector-config.yaml`:
 
 ```yaml
 receivers:
@@ -123,7 +153,7 @@ exporters:
     # application_key: "<client-secret>"
     # tenant_id: "<tenant-id>"
 
-    db_name: "<your-database>"
+    db_name: "<yourdbname>"
     metrics_table_name: "OTELMetrics"
     logs_table_name: "OTELLogs"
     traces_table_name: "OTELTraces"
@@ -150,7 +180,7 @@ service:
 | Placeholder | Replace with | Example |
 |---|---|---|
 | `<your-cluster>` | Your cluster hostname (without `https://`) | `mycluster.westus2.kusto.windows.net` |
-| `<your-database>` | The database name where you created the tables | `MyDatabase` |
+| `<yourdbname>` | The database name where you created the tables | `oteldb` |
 
 ### Authentication options
 
@@ -159,52 +189,36 @@ service:
 | **DefaultAzureCredential** | `use_azure_auth: true` | Local dev (`az login`), Managed Identity, Workload Identity (AKS) |
 | **Service principal** | `application_id` + `application_key` + `tenant_id` | CI/CD, headless environments |
 
-## Step 5: Download and run the collector
+> **Note:** When using `use_azure_auth: true`, the collector authenticates via the [DefaultAzureCredential](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential) chain. For local development, `az login` is the simplest option. In production (AKS), use [Workload Identity federation](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) with a federated credential on your Entra app registration — no client secrets needed.
 
-> **Important:** If you're running the [Aspire Dashboard](aspire-dashboard.md), stop it first — both use port 4317:
-> ```bash
-> docker stop aspire-dashboard
-> ```
+## Step 6: Start the collector
 
-The collector is a single binary. Download it, then run it with your config file.
-
-### Option A: Binary (recommended for getting started)
-
-1. Download the latest **otelcol-contrib** binary for your OS from [OTel Collector Contrib releases](https://github.com/open-telemetry/opentelemetry-collector-releases/releases) (look for `otelcol-contrib_*` assets).
-
-2. Make sure you're logged into Azure CLI (the collector uses this for authentication):
-
-   ```bash
-   az login
-   ```
-
-3. Run the collector:
-
-   ```bash
-   # Windows
-   otelcol-contrib.exe --config collector-config.yaml
-
-   # Linux / macOS
-   ./otelcol-contrib --config collector-config.yaml
-   ```
-
-4. You should see `Everything is ready. Begin running and processing data.` — the collector is now listening on port 4317.
-
-### Option B: Docker
-
-> **Note:** `use_azure_auth: true` requires Azure CLI inside the container. For Docker, use `application_id` + `application_key` + `tenant_id` in the config instead, or mount your Azure CLI credentials.
+Make sure you're logged into Azure CLI (for `use_azure_auth: true`):
 
 ```bash
+az login
+```
+
+Then start the collector:
+
+```bash
+# Binary (Windows)
+otelcol-contrib.exe --config collector-config.yaml
+
+# Binary (Linux / macOS)
+./otelcol-contrib --config collector-config.yaml
+
+# Docker
 docker run --rm -p 4317:4317 -p 4318:4318 \
   -v $(pwd)/collector-config.yaml:/etc/otelcol-contrib/config.yaml \
   otel/opentelemetry-collector-contrib:0.121.0
 ```
 
-### Option C: Kubernetes
+> **Docker + `use_azure_auth`:** Azure CLI credentials aren't available inside the Docker container. Use `application_id` + `application_key` + `tenant_id` in the config instead, or run the binary directly.
 
-For production deployments, see the [Azure Data Explorer exporter docs](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/azuredataexplorerexporter) for Kubernetes examples using Workload Identity.
+You should see `Everything is ready. Begin running and processing data.` — the collector is now listening on port 4317.
 
-## Step 6: Run the app and verify
+## Step 7: Run the app and verify
 
 With the collector running in one terminal, open a second terminal and start the app:
 

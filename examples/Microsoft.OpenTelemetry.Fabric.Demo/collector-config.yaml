@@ -22,7 +22,7 @@ exporters:
     # application_key: "<client-secret>"
     # tenant_id: "<tenant-id>"
 
-    db_name: "<your-database>"
+    db_name: "<yourdbname>"
     metrics_table_name: "OTELMetrics"
     logs_table_name: "OTELLogs"
     traces_table_name: "OTELTraces"

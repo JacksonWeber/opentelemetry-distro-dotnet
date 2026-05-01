@@ -286,7 +286,7 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 - [Agent 365 Migration Guide](docs/agent365-migration.md) — Migrate from the standalone Agent365 SDK to the distro
 - [Agent 365 Migration Testing](docs/testing-agent365.md) — Detailed migration checklist with auto-instrumentation, env vars, and span comparison
 - [Fabric Getting Started](docs/fabric-getting-started.md) — Send telemetry to Microsoft Fabric / Azure Data Explorer via OTLP + OTel Collector
-- [Aspire Dashboard](docs/aspire-dashboard.md) — Validate telemetry locally with the .NET Aspire Dashboard
+- [Aspire Dashboard](docs/aspire-dashboard-getting-started.md) — Validate telemetry locally with the .NET Aspire Dashboard
 
 ## Examples
 

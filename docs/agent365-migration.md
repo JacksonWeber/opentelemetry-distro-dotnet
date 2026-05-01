@@ -1,25 +1,6 @@
-# Agent 365 Observability
+# Migrating from Agent365 SDK to Microsoft OpenTelemetry Distro (.NET)
 
 > **Migration quick-reference** — before/after code, span attributes, and troubleshooting for migrating from the standalone Agent365 SDK to the `Microsoft.OpenTelemetry` distro. For the full standalone guide (no migration context), see [Agent 365 Getting Started](agent365-getting-started.md).
-
-> **Important:** You need to be part of the [Frontier preview program](https://adoption.microsoft.com/copilot/frontier-program/) to get **early access** to Microsoft Agent 365.
-
-To participate in the Agent 365 ecosystem, add Agent 365 Observability capabilities to your agent. Agent 365 Observability builds on [OpenTelemetry (OTel)](https://opentelemetry.io/docs/specs/otel/protocol/) and provides a unified framework for capturing telemetry consistently and securely across all agent platforms. By implementing this required component, you enable IT admins to monitor your agent's activity in Microsoft admin center and allow security teams to use Defender and Purview for compliance and threat detection.
-
-## Key benefits
-
-- **End-to-end visibility**: Capture comprehensive telemetry for every agent invocation, including sessions, tool calls, and exceptions, giving you full traceability across platforms.
-- **Security and compliance enablement**: Feed unified audit logs into Defender and Purview, enabling advanced security scenarios and compliance reporting for your agent.
-- **Cross-platform flexibility**: Build on OTel standards and support diverse runtimes and platforms like Copilot Studio, Foundry, and future agent frameworks.
-- **Operational efficiency for admins**: Provide centralized observability in Microsoft 365 admin center, reducing troubleshooting time and improving governance with role-based access controls for IT teams managing your agent.
-
-## Supported agents
-
-| Agent type | Details |
-|---|---|
-| **Microsoft Agent 365-enabled agents** | Use the observability SDK to instrument your agent. |
-| **Custom engine agents** | Use the observability SDK to instrument your agent. |
-| **Declarative agents** | Observability is supported out of the box. No SDK implementation required. |
 
 ## Installation (.NET)
 
@@ -116,11 +97,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.UseMicrosoftOpenTelemetry(o =>
 {
-    o.Exporters = ExportTarget.Console | ExportTarget.Agent365;
+    o.Exporters = ExportTarget.Agent365;
 
     // Option A (recommended): Let the distro auto-manage tokens via DI.
     // IExporterTokenCache<AgenticTokenStruct> is registered automatically.
-    // Your A365OtelWrapper calls RegisterObservability() at runtime.
+    // Your agent calls RegisterObservability() at runtime.
 
     // Option B: Provide your own token resolver (matches old Agent365ExporterOptions pattern)
     o.Agent365.Exporter.TokenResolver = async (agentId, tenantId) =>
@@ -136,7 +117,7 @@ If you need to add your own application-specific activity sources, use the longe
 builder.Services.AddOpenTelemetry()
     .UseMicrosoftOpenTelemetry(o =>
     {
-        o.Exporters = ExportTarget.Console | ExportTarget.Agent365;
+        o.Exporters = ExportTarget.Agent365;
     })
     .WithTracing(tracing => tracing
         .AddSource("MyCompany.MyAgent.CustomSource"));
@@ -155,24 +136,106 @@ builder.Services.AddOpenTelemetry()
 - `TokenStore` class file — delete it if present. Use `o.Agent365.Exporter.TokenResolver` directly, or let the distro auto-manage tokens via `IExporterTokenCache<AgenticTokenStruct>` (injected via DI)
 - `ConfigureOpenTelemetry()` extension method file (if you have one) — delete it, the distro handles all OTel setup
 
-## Token resolver
+## ConfigureResource for service identity
 
-When using the Agent 365 exporter, you must provide a token resolver function that returns an authentication token. The distro supports two approaches:
+If your old SDK project used a custom `AgentOTELExtensions.cs` with `.AddService()` to set `service.name`, `service.namespace`, `service.version`, and `deployment.environment`, migrate to the standard `.ConfigureResource()` API. Without this, spans show `unknown_service:...` as the service name.
 
-### Auto (DI) — recommended
-
-The distro automatically registers `IExporterTokenCache<AgenticTokenStruct>` via DI. Your `A365OtelWrapper` calls `RegisterObservability()` at runtime. No `TokenResolver` needed in configuration — it's wired internally.
+### Before (Agent365 SDK)
 
 ```csharp
-// Inject via constructor
-private readonly IExporterTokenCache<AgenticTokenStruct>? _agentTokenCache;
+// Custom AgentOTELExtensions.cs
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .SetResourceBuilder(ResourceBuilder.CreateDefault()
+            .AddService("MyAgent", serviceVersion: "1.0.0")));
+```
 
-// Then in your activity handler:
-_agentTokenCache?.RegisterObservability(agentId, tenantId, new AgenticTokenStruct(
-    userAuthorization: authSystem,
-    turnContext: turnContext,
-    authHandlerName: authHandlerName
-), EnvironmentUtils.GetObservabilityAuthenticationScope());
+### After (Distro)
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r
+        .AddService(serviceName: "MyAgent", serviceVersion: "1.0.0")
+        .AddAttributes(new Dictionary<string, object>
+        {
+            ["deployment.environment"] = builder.Environment.EnvironmentName,
+            ["service.namespace"] = "Microsoft.Agents"
+        }))
+    .UseMicrosoftOpenTelemetry(o =>
+    {
+        o.Exporters = ExportTarget.Agent365;
+    });
+```
+
+> `ConfigureResource()` is additive — your attributes are merged with the distro's auto-detected resource attributes (Azure VM, App Service, etc.). See [Customization: Configuring the Resource](customization.md#configuring-the-resource) for the full guide.
+
+## Token resolver
+
+When using the Agent 365 exporter, a token resolver is required. The distro can either auto-provide one via DI or you can set one explicitly via `o.Agent365.Exporter.TokenResolver`.
+
+### Auto (DI) — recommended for Agent Framework apps
+
+When no custom `TokenResolver` is set, the distro automatically calls `AddAgenticTracingExporter()` internally, registering `IExporterTokenCache<AgenticTokenStruct>` and `Agent365ExporterOptions` via DI. Your agent calls `RegisterObservability()` at runtime to supply credentials, and the cache handles token acquisition and refresh.
+
+**Setup in `Program.cs`:**
+
+```csharp
+builder.UseMicrosoftOpenTelemetry(o =>
+{
+    o.Exporters = ExportTarget.Agent365;
+    // No TokenResolver needed — the distro registers the agentic token cache automatically.
+});
+```
+
+**In your agent class:**
+
+```csharp
+using Microsoft.Agents.A365.Observability.Hosting.Caching;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
+
+public class MyAgent : AgentApplication
+{
+    private readonly IExporterTokenCache<AgenticTokenStruct> _agentTokenCache;
+    private readonly ILogger<MyAgent> _logger;
+
+    public MyAgent(
+        AgentApplicationOptions options,
+        IExporterTokenCache<AgenticTokenStruct> agentTokenCache,
+        ILogger<MyAgent> logger) : base(options)
+    {
+        _agentTokenCache = agentTokenCache
+            ?? throw new ArgumentNullException(nameof(agentTokenCache));
+        _logger = logger
+            ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    protected async Task MessageActivityAsync(
+        ITurnContext turnContext, ITurnState turnState, CancellationToken cancellationToken)
+    {
+        using var baggageScope = new BaggageBuilder()
+            .TenantId(turnContext.Activity.Recipient.TenantId)
+            .AgentId(turnContext.Activity.Recipient.AgenticAppId)
+            .Build();
+
+        try
+        {
+            _agentTokenCache.RegisterObservability(
+                turnContext.Activity.Recipient.AgenticAppId,
+                turnContext.Activity.Recipient.TenantId,
+                new AgenticTokenStruct(
+                    userAuthorization: UserAuthorization,
+                    turnContext: turnContext,
+                    authHandlerName: "AGENTIC"),
+                EnvironmentUtils.GetObservabilityAuthenticationScope());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error registering for observability: {Message}", ex.Message);
+        }
+
+        // ... your agent logic
+    }
+}
 ```
 
 ### Custom resolver — advanced
@@ -191,47 +254,58 @@ builder.Services.AddOpenTelemetry()
     });
 ```
 
-If you set `TokenResolver` explicitly, the auto DI token cache is **not** registered — your resolver is used instead.
+### Auto vs custom comparison
 
-## Baggage attributes
+| Approach | When to use | How it works |
+|---|---|---|
+| **Auto (DI)** — default | Agent Framework apps with `UserAuthorization` | Distro internally calls `AddAgenticTracingExporter()`, registering `IExporterTokenCache<AgenticTokenStruct>`. Your agent calls `RegisterObservability()`. Token exchange happens via `ExchangeTurnTokenAsync`. |
+| **Custom resolver** | Non-agent apps, service-to-service, or custom auth | Set `o.Agent365.Exporter.TokenResolver` directly. You own token acquisition. |
 
-Use `BaggageBuilder` to set contextual information that flows through all spans in a request. The SDK implements a `SpanProcessor` that copies all nonempty baggage entries to newly started spans without overwriting existing attributes.
+
+## Baggage middleware
+
+The A365 SDK migration to the distro does **not** auto-register baggage middleware. You must explicitly register it. Without middleware, auto-instrumented spans (e.g., from Semantic Kernel) will lack identity attributes (`microsoft.tenant.id`, `gen_ai.agent.id`) and be **silently dropped** by the A365 exporter.
+
+### `BaggageTurnMiddleware` — Bot Framework pipeline
+
+Propagates agent/tenant/user/conversation context as baggage to all child spans within a Bot Framework turn. Skips baggage setup for async replies (`ContinueConversation` events).
 
 ```csharp
-// These usings still work — namespaces are identical to the Agent365 SDK
-using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Hosting.Middleware;
 
-new BaggageBuilder()
-    .TenantId("tenant-123")
-    .AgentId("agent-456")
-    .ConversationId("conv-789")
-    .Build();
-
-// Any spans started in this context will receive these as attributes
+// Register on your Bot adapter
+adapter.Use(new BaggageTurnMiddleware());
 ```
+
+### `UseObservabilityRequestContext` — ASP.NET HTTP pipeline
+
+Sets tenant and agent IDs at the HTTP level before the Bot Framework pipeline runs. This adds `ObservabilityBaggageMiddleware` to the ASP.NET Core pipeline.
+
+```csharp
+using Microsoft.Agents.A365.Observability.Hosting.Middleware;
+
+var app = builder.Build();
+
+// Must run BEFORE the Bot Framework pipeline
+app.UseObservabilityRequestContext((httpContext) =>
+{
+    var tenantId = GetTenantIdFromContext(httpContext);
+    var agentId = GetAgentIdFromContext(httpContext);
+    return (tenantId, agentId);
+});
+
+app.Run();
+```
+
+> **Ordering matters:** `UseObservabilityRequestContext()` must be registered before any Bot Framework middleware so that baggage is available to all downstream spans.
 
 ## Auto-instrumentation
 
-Auto-instrumentation automatically listens to agentic frameworks' existing telemetry signals and forwards them to Agent 365 observability service.
+Auto-instrumentation automatically listens to agentic frameworks' existing telemetry signals and forwards them to Agent 365 observability service. The distro handles all registration automatically via `UseMicrosoftOpenTelemetry()`.
 
-### Supported platforms (.NET)
+> **How it works:** All A365 auto-instrumentations are **span processors that enrich existing spans** — they do not create new spans. Semantic Kernel and Agent Framework have dedicated span processors that extract and transform span attributes (e.g., input/output messages). OpenAI has source subscriptions only. The distro registers these processors automatically when `UseMicrosoftOpenTelemetry()` is called.
 
-| SDK / Framework | Support |
-|---|---|
-| Semantic Kernel | ✅ |
-| OpenAI | ✅ |
-| Agent Framework | ✅ |
-
-Auto-instrumentation is handled by the distro's `UseMicrosoftOpenTelemetry()` call which registers the correct `ActivitySource` listeners:
-
-```csharp
-builder.UseMicrosoftOpenTelemetry(o =>
-{
-    o.Exporters = ExportTarget.Console | ExportTarget.Agent365;
-});
-```
-
-The distro automatically subscribes to:
+The distro automatically subscribes to these `ActivitySource` names when the relevant instrumentation is enabled:
 
 | ActivitySource | Origin |
 |---|---|
@@ -245,131 +319,112 @@ The distro automatically subscribes to:
 | `Experimental.Microsoft.Agents.AI.ChatClient` | Chat client telemetry |
 | `Azure.*` | Azure SDK (via Azure Monitor integration) |
 
-## Manual Instrumentation
+### Semantic Kernel
 
-Use Agent 365 observability SDK to understand the internal working of the agent. The SDK provides scopes: `InvokeAgentScope`, `ExecuteToolScope`, `InferenceScope`, and `OutputScope`.
-
-> **Important:** For successful store validation, your agent **must** implement `InvokeAgentScope`, `InferenceScope`, and `ExecuteToolScope`. These three scopes are required for publishing.
-
-### Agent invocation (`InvokeAgentScope`)
-
-Use this scope at the start of your agent process to capture properties like the current agent being invoked, agent user data, and more.
+Auto-instrumentation requires `BaggageBuilder` to set agent ID and tenant ID. Ensure that the ID used when creating a `ChatCompletionAgent` matches the agent ID passed to `BaggageBuilder`:
 
 ```csharp
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 
-var agentDetails = new AgentDetails(
-    agentId: "agent-456",
-    agentName: "My Agent",
-    agentDescription: "An AI agent powered by Azure OpenAI",
-    agenticUserId: "auid-123",
-    agenticUserEmail: "agent@contoso.com",
-    agentBlueprintId: "blueprint-789",
-    tenantId: "tenant-123");
-
-var scopeDetails = new InvokeAgentScopeDetails(
-    endpoint: new Uri("https://myagent.contoso.com"));
-
-var request = new Request(
-    content: "User asks a question",
-    sessionId: "session-42",
-    conversationId: "conv-xyz",
-    channel: new Channel(name: "msteams"));
-
-var callerDetails = new CallerDetails(
-    userDetails: new UserDetails(
-        userId: "user-123",
-        userEmail: "jane.doe@contoso.com",
-        userName: "Jane Doe"));
-
-using (var scope = InvokeAgentScope.Start(request, scopeDetails, agentDetails, callerDetails))
+public async Task ProcessUserRequest(string userInput)
 {
-    // Perform agent invocation logic
-    var response = await CallAgentAsync();
-    scope.RecordOutputMessages(new[] { response });
+    using var baggageScope = new BaggageBuilder()
+        .AgentId("agent-456")
+        .TenantId("tenant-123")
+        .Build();
+
+    var chatCompletionAgent = new ChatCompletionAgent
+    {
+        Id = "agent-456",  // Must match BaggageBuilder.AgentId
+        // ... other configuration
+    };
+
+    // Semantic Kernel calls are automatically traced
+    await foreach (var response in chatCompletionAgent.InvokeAsync(userInput))
+    {
+        // Process response.Content
+    }
 }
 ```
 
-### Tool execution (`ExecuteToolScope`)
+No `.AddSource()` needed — the distro auto-registers `Microsoft.SemanticKernel*` and the internal `SemanticKernelSpanProcessor`.
 
-Use this scope to add observability tracking to your agent's tool execution.
+### OpenAI
+
+Auto-instrumentation requires `BaggageBuilder`. OpenAI calls are automatically traced when `EnableOpenAIInstrumentation` is `true` (default):
 
 ```csharp
-var toolDetails = new ToolCallDetails(
-    toolName: "summarize",
-    arguments: "{\"text\": \"...\"}",
-    toolCallId: "tc-001",
-    description: "Summarize provided text",
-    toolType: "function",
-    endpoint: new Uri("https://tools.contoso.com:8080"));
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 
-using (var scope = ExecuteToolScope.Start(request, toolDetails, agentDetails))
+public async Task<string> ProcessUserRequest(string userInput)
 {
-    var result = await RunToolAsync(toolDetails);
-    scope.RecordResponse(result);
+    using var baggageScope = new BaggageBuilder()
+        .AgentId("agent-456")
+        .TenantId("tenant-123")
+        .Build();
+
+    // OpenAI calls are automatically traced
+    var response = await openAIClient.GetChatCompletionsAsync(...);
+
+    // For tool calls, use ExecuteToolScope for manual tracing:
+    var toolDetails = new ToolCallDetails(
+        toolName: "search",
+        arguments: "{\"query\": \"...\"}",
+        toolCallId: "tc-001",
+        toolType: "function");
+
+    using var toolScope = ExecuteToolScope.Start(request, toolDetails, agentDetails);
+    var result = await RunToolAsync();
+    toolScope.RecordResponse(result);
 }
 ```
 
-### Inference (`InferenceScope`)
-
-Use this scope to instrument AI model inference calls with observability tracking to capture token usage, model details, and response metadata.
+The distro subscribes to `OpenAI.*` and `Azure.AI.OpenAI*` sources automatically. However, to enable the OpenAI SDK to emit telemetry, you must set the `AppContext` switch in your application:
 
 ```csharp
-var inferenceDetails = new InferenceCallDetails(
-    operationName: InferenceOperationType.Chat,
-    model: "gpt-4o-mini",
-    providerName: "azure-openai");
+AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
+```
 
-using (var scope = InferenceScope.Start(request, inferenceDetails, agentDetails))
+### Agent Framework
+
+Auto-instrumentation requires `BaggageBuilder`:
+
+```csharp
+using Microsoft.Agents.A365.Observability.Runtime.Common;
+
+public class MyAgent : AgentApplication
 {
-    var completion = await CallLlmAsync();
-    scope.RecordOutputMessages(new[] { completion.Text });
-    scope.RecordInputTokens(completion.Usage.InputTokens);
-    scope.RecordOutputTokens(completion.Usage.OutputTokens);
+    protected async Task MessageActivityAsync(
+        ITurnContext turnContext, ITurnState turnState, CancellationToken cancellationToken)
+    {
+        using var baggageScope = new BaggageBuilder()
+            .AgentId("agent-456")
+            .TenantId("tenant-123")
+            .Build();
+
+        // Agent Framework calls are automatically traced
+    }
 }
 ```
 
-### Output (`OutputScope`)
+> **Custom ActivitySource names:** If the old SDK used a custom `sourceName` in `.UseOpenTelemetry(sourceName: "MyCustomSource")`, the distro does **not** auto-detect it — only the three default `Experimental.Microsoft.Agents.AI*` sources are subscribed. You must register it explicitly via `.AddSource("MyCustomSource")`. See [Agent Framework getting-started: custom ActivitySource name](agent-framework-getting-started.md#using-a-custom-activitysource-name).
 
-Use this scope for asynchronous scenarios where `InvokeAgentScope`, `ExecuteToolScope`, or `InferenceScope` can't capture output data synchronously. Start `OutputScope` as a child span to record the final output messages after the parent scope finishes.
-
-```csharp
-// OutputScope is a child span — capture the parent context while InvokeAgentScope is still active.
-// Example: save parentContext before disposing the InvokeAgentScope.
-//   var parentContext = invokeScope.GetActivityContext();
-
-var parentContext = savedParentContext; // ActivityContext from InvokeAgentScope.GetActivityContext()
-
-var response = new Response(new[] { "Here is your organized inbox with 15 urgent emails." });
-
-using (OutputScope.Start(
-    request,
-    response,
-    agentDetails,
-    spanDetails: new SpanDetails(parentContext: parentContext)))
-{
-    // Output messages are recorded automatically from the response
-}
-```
-
-## UseMicrosoftOpenTelemetry options reference
+## Exporter and options reference
 
 ```csharp
 builder.Services.AddOpenTelemetry()
     .UseMicrosoftOpenTelemetry(o =>
     {
         // --- Export targets (pick one or combine with |) ---
-        o.Exporters = ExportTarget.Console          // Console output (dev)
-                    | ExportTarget.Agent365          // Agent365 observability platform
-                    | ExportTarget.AzureMonitor;     // Application Insights
+        o.Exporters = ExportTarget.Agent365;         // Agent365 observability platform
+        // o.Exporters |= ExportTarget.AzureMonitor; // Application Insights
+        // o.Exporters |= ExportTarget.Console;      // Console output (dev only)
 
         // --- Agent365 exporter settings ---
 
-
         // Option A: Let the distro auto-manage tokens via DI (recommended)
         // IExporterTokenCache<AgenticTokenStruct> is registered automatically.
-        // Your A365OtelWrapper calls RegisterObservability() at runtime.
+        // Your agent calls RegisterObservability() at runtime.
         // No TokenResolver needed here — it's wired internally.
 
         // Option B: Provide your own token resolver (advanced/custom)
@@ -397,12 +452,21 @@ builder.Services.AddOpenTelemetry()
     });
 ```
 
-### Token resolver: auto vs custom
+### Auth scopes
 
-| Approach | When to use | How it works |
-|---|---|---|
-| **Auto (DI)** — default | Agent Framework apps with `UserAuthorization` | Distro internally calls `AddAgenticTracingExporter()`, registering `IExporterTokenCache<AgenticTokenStruct>`. Your agent calls `RegisterObservability()`. Token exchange happens via `ExchangeTurnTokenAsync`. |
-| **Custom resolver** | Non-agent apps, service-to-service, or custom auth | Set `o.Agent365.Exporter.TokenResolver` directly. You own token acquisition. |
+There is no `AuthScopes` property on `Agent365ExporterOptions`. Auth scopes are controlled two ways:
+
+1. **Via `RegisterObservability()`** — the `observabilityScopes` parameter on the token cache:
+   ```csharp
+   _agentTokenCache.RegisterObservability(agentId, tenantId, tokenGenerator,
+       EnvironmentUtils.GetObservabilityAuthenticationScope());
+   ```
+   The default production scope is `api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite`.
+
+2. **Via environment variable** — `A365_OBSERVABILITY_SCOPE_OVERRIDE` overrides the default scope for testing:
+   ```powershell
+   $env:A365_OBSERVABILITY_SCOPE_OVERRIDE = "https://api.powerplatform.com/.default"
+   ```
 
 ## Validate locally
 
@@ -470,166 +534,6 @@ When using `ExportTarget.Console | ExportTarget.Agent365`, look for successful H
 Received HTTP response headers after *ms - 200
 ```
 
-## Validate for store publishing
-
-> **Important:** For successful store validation, your agent **must** implement the `InvokeAgentScope`, `InferenceScope`, and `ExecuteToolScope` scopes. These three scopes are required for publishing.
-
-### `InvokeAgentScope` attributes
-
-```json
-{
-    "error.type": "Optional",
-    "microsoft.a365.agent.blueprint.id": "Required",
-    "gen_ai.agent.description": "Optional",
-    "gen_ai.agent.id": "Required",
-    "gen_ai.agent.name": "Required",
-    "microsoft.a365.agent.platform.id": "Optional",
-    "microsoft.agent.user.email": "Required",
-    "microsoft.agent.user.id": "Required",
-    "gen_ai.agent.version": "Optional",
-    "microsoft.a365.caller.agent.blueprint.id": "Optional",
-    "microsoft.a365.caller.agent.id": "Optional",
-    "microsoft.a365.caller.agent.name": "Optional",
-    "microsoft.a365.caller.agent.platform.id": "Optional",
-    "microsoft.a365.caller.agent.user.email": "Optional",
-    "microsoft.a365.caller.agent.user.id": "Optional",
-    "microsoft.a365.caller.agent.version": "Optional",
-    "client.address": "Required",
-    "user.id": "Required",
-    "user.name": "Optional",
-    "user.email": "Required",
-    "microsoft.channel.link": "Optional",
-    "microsoft.channel.name": "Required",
-    "gen_ai.conversation.id": "Required",
-    "microsoft.conversation.item.link": "Optional",
-    "gen_ai.input.messages": "Required",
-    "gen_ai.operation.name": "Required",
-    "gen_ai.output.messages": "Required",
-    "server.address": "Required",
-    "server.port": "Required",
-    "microsoft.session.id": "Optional",
-    "microsoft.session.description": "Optional",
-    "microsoft.tenant.id": "Required"
-}
-```
-
-### `ExecuteToolScope` attributes
-
-```json
-{
-    "error.type": "Optional",
-    "microsoft.a365.agent.blueprint.id": "Required",
-    "gen_ai.agent.description": "Optional",
-    "gen_ai.agent.id": "Required",
-    "gen_ai.agent.name": "Required",
-    "microsoft.a365.agent.platform.id": "Optional",
-    "microsoft.agent.user.email": "Required",
-    "microsoft.agent.user.id": "Required",
-    "gen_ai.agent.version": "Optional",
-    "client.address": "Required",
-    "user.id": "Required",
-    "user.name": "Optional",
-    "user.email": "Required",
-    "microsoft.channel.link": "Optional",
-    "microsoft.channel.name": "Required",
-    "gen_ai.conversation.id": "Required",
-    "microsoft.conversation.item.link": "Optional",
-    "gen_ai.operation.name": "Required",
-    "gen_ai.tool.call.arguments": "Required",
-    "gen_ai.tool.call.id": "Required",
-    "gen_ai.tool.call.result": "Required",
-    "gen_ai.tool.description": "Optional",
-    "gen_ai.tool.name": "Required",
-    "gen_ai.tool.type": "Required",
-    "server.address": "Optional",
-    "server.port": "Optional",
-    "microsoft.session.id": "Optional",
-    "microsoft.session.description": "Optional",
-    "microsoft.tenant.id": "Required"
-}
-```
-
-### `InferenceScope` attributes
-
-```json
-{
-    "error.type": "Optional",
-    "microsoft.a365.agent.blueprint.id": "Required",
-    "gen_ai.agent.description": "Optional",
-    "gen_ai.agent.id": "Required",
-    "gen_ai.agent.name": "Required",
-    "microsoft.a365.agent.platform.id": "Optional",
-    "microsoft.a365.agent.thought.process": "Optional",
-    "microsoft.agent.user.email": "Required",
-    "microsoft.agent.user.id": "Required",
-    "gen_ai.agent.version": "Optional",
-    "client.address": "Required",
-    "user.id": "Required",
-    "user.name": "Optional",
-    "user.email": "Required",
-    "microsoft.channel.link": "Optional",
-    "microsoft.channel.name": "Required",
-    "gen_ai.conversation.id": "Required",
-    "microsoft.conversation.item.link": "Optional",
-    "gen_ai.input.messages": "Required",
-    "gen_ai.operation.name": "Required",
-    "gen_ai.output.messages": "Required",
-    "gen_ai.provider.name": "Required",
-    "gen_ai.request.model": "Required",
-    "gen_ai.response.finish_reasons": "Optional",
-    "gen_ai.usage.input_tokens": "Optional",
-    "gen_ai.usage.output_tokens": "Optional",
-    "server.address": "Optional",
-    "server.port": "Optional",
-    "microsoft.session.description": "Optional",
-    "microsoft.session.id": "Optional",
-    "microsoft.tenant.id": "Required"
-}
-```
-
-### `OutputScope` attributes
-
-```json
-{
-    "microsoft.a365.agent.blueprint.id": "Required",
-    "gen_ai.agent.description": "Optional",
-    "gen_ai.agent.id": "Required",
-    "gen_ai.agent.name": "Required",
-    "microsoft.a365.agent.platform.id": "Optional",
-    "microsoft.agent.user.email": "Required",
-    "microsoft.agent.user.id": "Required",
-    "gen_ai.agent.version": "Optional",
-    "client.address": "Required",
-    "user.id": "Required",
-    "user.name": "Optional",
-    "user.email": "Required",
-    "microsoft.channel.link": "Optional",
-    "microsoft.channel.name": "Required",
-    "gen_ai.conversation.id": "Required",
-    "microsoft.conversation.item.link": "Optional",
-    "gen_ai.operation.name": "Required",
-    "gen_ai.output.messages": "Required",
-    "microsoft.session.id": "Optional",
-    "microsoft.session.description": "Optional",
-    "microsoft.tenant.id": "Required"
-}
-```
-
-## Viewing exported logs
-
-To view agent telemetry in Microsoft Purview or Microsoft Defender:
-
-- **Microsoft Purview**: Auditing must be turned on for your organization. See [Turn auditing on or off](https://learn.microsoft.com/en-us/purview/audit-log-enable-disable#turn-on-auditing).
-- **Microsoft Defender**: Advanced hunting must be configured to access the `CloudAppEvents` table. See [CloudAppEvents table](https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-cloudappevents-table).
-
-## Test your agent with observability
-
-After implementing observability, verify telemetry capture:
-
-1. Go to: `https://admin.cloud.microsoft/#/agents/all`
-2. Select your agent > Activity
-3. You should see sessions and tool calls
-
 ## Troubleshooting
 
 ### Observability data doesn't appear
@@ -647,7 +551,7 @@ After implementing observability, verify telemetry capture:
 
 **Symptoms:** Spans are silently dropped and never exported.
 
-**Resolution:** Ensure `BaggageBuilder` is set up with tenant ID and agent ID before creating spans. These values propagate through the OpenTelemetry context and attach to all spans created within the baggage scope.
+**Resolution:** Ensure `BaggageBuilder` is set up with tenant ID and agent ID before creating spans. These values propagate through the OpenTelemetry context and attach to all spans created within the baggage scope. See [Baggage middleware](#baggage-middleware) — without middleware registration, auto-instrumented spans will lack identity attributes.
 
 ### Token resolution failure — export skipped or unauthorized
 
@@ -661,18 +565,56 @@ After implementing observability, verify telemetry capture:
 
 ### HTTP 401 Unauthorized
 
+**Symptoms:** Export fails with HTTP 401. The exporter doesn't retry this error.
+
 **Resolution:**
 
-- Verify the token audience matches the observability endpoint scope (default: `api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite`).
-- Ensure the identity has Agent 365 observability permissions.
-- The `Agent365.Observability.OtelWrite` permission is required for .NET `0.3-beta` and newer.
+- Verify the token audience matches the observability endpoint scope.
+- Check that the token resolver isn't returning a delegated user token, a token for an incorrect audience, or an expired token.
 
 ### HTTP 403 Forbidden
 
+**Symptoms:** Export fails with HTTP 403. The exporter doesn't retry this error. An HTTP 403 error can have different causes. Check the following resolutions in order.
+
 **Resolution:**
 
-- Verify the Tenant ID is in the Agent 365 allowed tenant list for trace ingestion.
-- Confirm the agent identity has the required role or permission for the target tenant.
+- **Missing license** — Verify that your tenant has one of the following licenses assigned in [Microsoft 365 admin center](https://admin.cloud.microsoft/?source=applauncher#/homepage):
+  - **Test - Microsoft 365 E7**
+  - **Microsoft 365 E7**
+  - **Microsoft Agent 365 Frontier**
+- **Missing `Agent365.Observability.OtelWrite` permission** — If you recently upgraded your observability packages, you need to grant this permission. Grant it using one of the following options:
+
+  **Option A — Agent 365 CLI** (requires `a365.config.json` and `a365.generated.config.json` in your config directory, a Global Administrator account, and [Agent 365 CLI v1.1.139-preview](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Cli/1.1.139-preview) or later)
+
+  ```
+  a365 setup admin --config-dir "<path-to-config-dir>"
+  ```
+
+  This command grants all missing permissions, including the new Observability scopes.
+
+  **Option B — Entra Portal** (no config files required; requires Global Administrator access to the blueprint app registration)
+
+  1. Go to **Entra portal** > **App registrations** > select your Blueprint app.
+  2. Go to **API permissions** > **Add a permission** > **APIs my organization uses** > search for `9b975845-388f-4429-889e-eab1ef63949c`.
+  3. Select **Delegated permissions** > check `Agent365.Observability.OtelWrite` > **Add permissions**.
+  4. Repeat step 2–3, this time select **Application permissions** > check `Agent365.Observability.OtelWrite` > **Add permissions**.
+  5. Click **Grant admin consent** and confirm.
+
+  Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.OtelWrite` (Application) should show `Granted` status.
+
+### Logging configuration
+
+Use the `Microsoft.Agents.A365.Observability` logger category for debug-level diagnostics:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Microsoft.Agents.A365.Observability": "Debug"
+    }
+  }
+}
+```
 
 ### HTTP 429 / 5xx — Transient errors
 
@@ -692,6 +634,10 @@ After implementing observability, verify telemetry capture:
 
 - Verify prerequisites for viewing exported logs (Purview auditing, Defender advanced hunting).
 - Telemetry can take several minutes to populate after a successful export.
+
+### Cross-language reference
+
+For troubleshooting patterns consistent across languages (logging level migration, environment variables), see the [Node.js migration guide](https://github.com/microsoft/opentelemetry-distro-javascript/blob/main/MIGRATION_A365.md).
 
 ## Reference implementation
 

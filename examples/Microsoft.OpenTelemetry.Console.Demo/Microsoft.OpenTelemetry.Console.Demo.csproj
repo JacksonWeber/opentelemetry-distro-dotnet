@@ -12,11 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.OpenTelemetry\Microsoft.OpenTelemetry.csproj" />
-    <!-- Explicit refs needed for ProjectReference builds: Microsoft.Agents.Builder (PrivateAssets=all)
-         pulls in 10.x Microsoft.Extensions.* which conflict with the net8.0 shared framework.
-         Real NuGet consumers don't need these — PrivateAssets suppresses the transitive flow. -->
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 
 </Project>

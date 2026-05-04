@@ -454,18 +454,21 @@ builder.Services.AddOpenTelemetry()
 
 ### Auth scopes
 
-There is no `AuthScopes` property on `Agent365ExporterOptions`. Auth scopes are controlled two ways:
+> ⚠️ **Breaking change:** The observability authentication scope changed from `https://api.powerplatform.com/.default` (old A365 SDK) to a new value. If you hardcoded the old scope, you will get auth failures after migration. You must also grant the `Agent365.Observability.OtelWrite` permission — see [HTTP 403 Forbidden](#http-403-forbidden).
 
-1. **Via `RegisterObservability()`** — the `observabilityScopes` parameter on the token cache:
+There is no `AuthScopes` property on `Agent365ExporterOptions`. Do not hardcode scope strings. Auth scopes are controlled two ways:
+
+1. **Via `RegisterObservability()`** — the `observabilityScopes` parameter on the token cache. Use the helper to get the correct scope automatically:
    ```csharp
+   using Microsoft.Agents.A365.Observability.Runtime.Common;
+
    _agentTokenCache.RegisterObservability(agentId, tenantId, tokenGenerator,
        EnvironmentUtils.GetObservabilityAuthenticationScope());
    ```
-   The default production scope is `api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite`.
 
 2. **Via environment variable** — `A365_OBSERVABILITY_SCOPE_OVERRIDE` overrides the default scope for testing:
    ```powershell
-   $env:A365_OBSERVABILITY_SCOPE_OVERRIDE = "https://api.powerplatform.com/.default"
+   $env:A365_OBSERVABILITY_SCOPE_OVERRIDE = "api://test/.default"
    ```
 
 ## Validate locally

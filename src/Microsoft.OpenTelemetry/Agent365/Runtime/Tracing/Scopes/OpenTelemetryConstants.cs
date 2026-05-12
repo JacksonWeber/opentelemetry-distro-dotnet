@@ -88,7 +88,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string TelemetrySdkNameKey = "telemetry.sdk.name";
         public const string TelemetrySdkLanguageKey = "telemetry.sdk.language";
         public const string TelemetrySdkVersionKey = "telemetry.sdk.version";
-        public const string TelemetrySdkNameValue = "A365ObservabilitySDK";
+        public const string TelemetrySdkNameValue = "microsoft-opentelemetry";
         public const string TelemetrySdkLanguageValue = "dotnet";
         
         /// <summary>

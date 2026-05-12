@@ -112,7 +112,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
 
             return new Channel(
                 name: channelId.Channel,
-                link: channelId.SubChannel);
+                link: Extensions.TurnContextExtensions.ResolveSubChannel(turnContext));
         }
 
         private static SendActivitiesHandler CreateSendHandler(

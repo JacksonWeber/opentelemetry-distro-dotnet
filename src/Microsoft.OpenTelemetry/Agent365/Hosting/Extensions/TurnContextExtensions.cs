@@ -71,7 +71,65 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         public static IEnumerable<KeyValuePair<string, object?>> GetChannelBaggagePairs(this ITurnContext turnContext)
         {
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelNameKey, turnContext.Activity?.ChannelId?.Channel);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelLinkKey, turnContext.Activity?.ChannelId?.SubChannel);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelLinkKey, ResolveSubChannel(turnContext));
+        }
+
+        /// <summary>
+        /// Resolves the sub-channel value from the turn context, falling back to
+        /// the <c>productContext</c> property in ChannelData when SubChannel is not set.
+        /// </summary>
+        internal static string? ResolveSubChannel(ITurnContext turnContext)
+        {
+            var subChannel = turnContext.Activity?.ChannelId?.SubChannel;
+            if (string.IsNullOrWhiteSpace(subChannel) && turnContext.Activity?.ChannelData != null)
+            {
+                try
+                {
+                    var channelData = turnContext.Activity.ChannelData;
+                    string? productContext = null;
+
+                    if (channelData is System.Text.Json.JsonElement jsonElement)
+                    {
+                        if (jsonElement.TryGetProperty("productContext", out var pc) &&
+                            pc.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            productContext = pc.GetString();
+                        }
+                    }
+                    else if (channelData is System.Text.Json.Nodes.JsonObject jsonObject)
+                    {
+                        if (jsonObject.TryGetPropertyValue("productContext", out var node) &&
+                            node is System.Text.Json.Nodes.JsonValue val)
+                        {
+                            productContext = val.ToString();
+                        }
+                    }
+                    else
+                    {
+                        var json = channelData.ToString();
+                        if (!string.IsNullOrWhiteSpace(json))
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(json);
+                            if (doc.RootElement.TryGetProperty("productContext", out var pc) &&
+                                pc.ValueKind == System.Text.Json.JsonValueKind.String)
+                            {
+                                productContext = pc.GetString();
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(productContext))
+                    {
+                        subChannel = productContext;
+                    }
+                }
+                catch
+                {
+                    // Ignore ChannelData parsing failures and keep subChannel fallback behavior.
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(subChannel) ? null : subChannel;
         }
 
         /// <summary>

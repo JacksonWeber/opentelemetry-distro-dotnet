@@ -107,9 +107,109 @@ public class BaggageTurnMiddlewareTests
         baggageAfterMiddleware.Should().Be(baggageBeforeMiddleware);
     }
 
+    [TestMethod]
+    public async Task OnTurnAsync_ExtractsProductContextFromChannelData()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        var channelData = new System.Text.Json.Nodes.JsonObject
+        {
+            ["productContext"] = "copilot-m365",
+        };
+        var turnContext = CreateTurnContext(channelData: channelData);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(turnContext, next);
+
+        // Assert
+        capturedChannelLink.Should().Be("copilot-m365");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_SubChannelTakesPrecedenceOverProductContext()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        var channelData = new System.Text.Json.Nodes.JsonObject
+        {
+            ["productContext"] = "copilot-m365",
+        };
+        var turnContext = CreateTurnContext(subChannel: "explicit-subchannel", channelData: channelData);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(turnContext, next);
+
+        // Assert
+        capturedChannelLink.Should().Be("explicit-subchannel");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_ExtractsProductContextFromJsonStringChannelData()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        var channelData = "{\"productContext\": \"copilot-teams\"}";
+        var turnContext = CreateTurnContext(channelData: channelData);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(turnContext, next);
+
+        // Assert
+        capturedChannelLink.Should().Be("copilot-teams");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_HandlesInvalidJsonChannelDataGracefully()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        var channelData = "not-valid-json";
+        var turnContext = CreateTurnContext(channelData: channelData);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(turnContext, next);
+
+        // Assert – should not throw and channel link should be null
+        capturedChannelLink.Should().BeNull();
+    }
+
     private static ITurnContext CreateTurnContext(
         string activityType = "message",
-        string? activityName = null)
+        string? activityName = null,
+        string? subChannel = null,
+        object? channelData = null)
     {
         var mockActivity = new Mock<IActivity>();
         mockActivity.Setup(a => a.Type).Returns(activityType);
@@ -133,7 +233,16 @@ public class BaggageTurnMiddlewareTests
         });
         mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
         mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("test-channel"));
+        var channelId = new ChannelId("test-channel");
+        if (subChannel != null)
+        {
+            channelId.SubChannel = subChannel;
+        }
+        mockActivity.Setup(a => a.ChannelId).Returns(channelId);
+        if (channelData != null)
+        {
+            mockActivity.Setup(a => a.ChannelData).Returns(channelData);
+        }
 
         var mockTurnContext = new Mock<ITurnContext>();
         mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);

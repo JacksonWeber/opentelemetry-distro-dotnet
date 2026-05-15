@@ -52,10 +52,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
 
         /// <summary>
         /// Called when an activity starts, adds tags for attributes listed in AttributeKeys.
+        /// Only GenAI spans originating from the Agent365 SDK source are processed (those that
+        /// have a <c>gen_ai.operation.name</c> tag, i.e. invoke_agent, execute_tool, inference,
+        /// and output_messages spans); all other activities pass through unmodified.
         /// </summary>
         /// <param name="activity">The activity that is starting.</param>
         public override void OnStart(Activity activity)
         {
+            if (activity.Source.Name != OpenTelemetryConstants.SourceName ||
+                activity.GetTagItem(OpenTelemetryConstants.GenAiOperationNameKey) == null)
+            {
+                base.OnStart(activity);
+                return;
+            }
+
             // Set telemetry SDK attributes
             activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkNameKey, OpenTelemetryConstants.TelemetrySdkNameValue);
             activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkLanguageKey, OpenTelemetryConstants.TelemetrySdkLanguageValue);

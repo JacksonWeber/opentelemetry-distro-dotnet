@@ -28,12 +28,24 @@ public class Agent365Options
     }
 
     /// <summary>
-    /// Async delegate used to resolve the auth token. REQUIRED.
+    /// Async delegate used to resolve the auth token.
+    /// Either this or <see cref="ContextualTokenResolver"/> must be set.
+    /// When both are set, <see cref="ContextualTokenResolver"/> takes precedence.
     /// </summary>
     public AsyncAuthTokenResolver? TokenResolver
     {
         get => ExporterOptions.TokenResolver;
         set => ExporterOptions.TokenResolver = value;
+    }
+
+    /// <summary>
+    /// Async delegate used to resolve the auth token with rich context including the agentic user ID.
+    /// Takes precedence over <see cref="TokenResolver"/> when set.
+    /// </summary>
+    public AsyncContextualTokenResolver? ContextualTokenResolver
+    {
+        get => ExporterOptions.ContextualTokenResolver;
+        set => ExporterOptions.ContextualTokenResolver = value;
     }
 
     /// <summary>

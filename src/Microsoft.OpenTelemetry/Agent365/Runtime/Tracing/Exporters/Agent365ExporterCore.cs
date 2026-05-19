@@ -193,7 +193,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 string? token = null;
                 try
                 {
-                    token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
+                    // Prefer ContextualTokenResolver when set; extract agentic user ID from the
+                    // first activity in the group (1:1 relationship between agent and agentic user).
+                    if (options.ContextualTokenResolver != null)
+                    {
+                        var agenticUserId = activities.Count > 0
+                            ? activities[0].GetAttributeOrBaggage(OpenTelemetryConstants.AgentAUIDKey)
+                            : null;
+                        var identity = new AgentIdentity(agentId, agenticUserId);
+
+                        var context = new TokenResolverContext(identity, tenantId);
+                        token = await options.ContextualTokenResolver(context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
+                    }
+
                     this._logger?.LogDebug("Agent365ExporterCore: Obtained token for agent {AgentId} tenant {TenantId}.", agentId, tenantId);
                 }
                 catch (Exception ex)

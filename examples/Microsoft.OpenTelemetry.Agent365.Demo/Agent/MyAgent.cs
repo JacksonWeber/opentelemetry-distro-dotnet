@@ -59,6 +59,7 @@ namespace Agent365AgentFrameworkSampleAgent.Agent
 
         private readonly IChatClient? _chatClient = null;
         private readonly IConfiguration? _configuration = null;
+        private readonly MyTokenService? _tokenService = null;
         private readonly IExporterTokenCache<AgenticTokenStruct>? _agentTokenCache = null;
         private readonly ILogger<MyAgent>? _logger = null;
         private readonly IMcpToolRegistrationService? _toolService = null;
@@ -98,12 +99,14 @@ namespace Agent365AgentFrameworkSampleAgent.Agent
         public MyAgent(AgentApplicationOptions options,
             IChatClient chatClient,
             IConfiguration configuration,
+            MyTokenService tokenService,
             IExporterTokenCache<AgenticTokenStruct> agentTokenCache,
             IMcpToolRegistrationService toolService,
             ILogger<MyAgent> logger) : base(options)
         {
             _chatClient = chatClient;
             _configuration = configuration;
+            _tokenService = tokenService;
             _agentTokenCache = agentTokenCache;
             _logger = logger;
             _toolService = toolService;
@@ -217,6 +220,7 @@ namespace Agent365AgentFrameworkSampleAgent.Agent
                 "MessageProcessor",
                 turnContext,
                 turnState,
+                _tokenService!,
                 _agentTokenCache,
                 UserAuthorization,
                 ObservabilityAuthHandlerName ?? string.Empty,

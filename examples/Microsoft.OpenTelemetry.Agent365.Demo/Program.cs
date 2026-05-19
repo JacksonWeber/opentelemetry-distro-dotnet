@@ -23,13 +23,29 @@ using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Read toggle: "Contextual" uses ContextualTokenResolver, otherwise uses vanilla TokenResolver (auto DI cache).
+var useContextualResolver = builder.Configuration.GetValue<bool>("Observability:UseContextualTokenResolver");
+
+// Register the manual token service (used only when contextual resolver is active).
+var tokenService = new MyTokenService();
+builder.Services.AddSingleton(tokenService);
+
 // Setup Microsoft OpenTelemetry distro
 builder.Services.AddOpenTelemetry()
     .UseMicrosoftOpenTelemetry(o =>
     {
         o.Exporters = ExportTarget.Console | ExportTarget.Agent365;
-        // Token resolver is auto-registered via AddAgenticTracingExporter internally.
-        // To use a custom resolver, set: o.Agent365.TokenResolver = ...
+
+        if (useContextualResolver)
+        {
+            // ContextualTokenResolver: receives agentId, tenantId, and agenticUserId via context.
+            o.Agent365.ContextualTokenResolver = async (context) =>
+            {
+                return await tokenService.GetTokenAsync(
+                    context.Identity.AgentId, context.TenantId, context.Identity.AgenticUserId);
+            };
+        }
+        // Otherwise: vanilla TokenResolver is auto-registered via AddAgenticTracingExporter (DI cache).
     })
     .WithTracing(tracing => tracing
         .AddSource(

@@ -15,6 +15,7 @@ namespace Agent365AgentFrameworkSampleAgent.telemetry
             string operationName,
             ITurnContext turnContext,
             ITurnState turnState,
+            MyTokenService tokenService,
             IExporterTokenCache<AgenticTokenStruct>? agentTokenCache,
             UserAuthorization authSystem,
             string authHandlerName,
@@ -36,9 +37,13 @@ namespace Agent365AgentFrameworkSampleAgent.telemetry
                     .AgentId(agentId)
                     .Build();
 
-                    // Register observability token for the exporter
+                    // Register credentials for export-time token resolution.
                     try
                     {
+                        // Register with the manual token service (used by ContextualTokenResolver).
+                        tokenService.Register(agentId, tenantId, authSystem, turnContext, authHandlerName);
+
+                        // Also register with the DI token cache (used by vanilla TokenResolver).
                         agentTokenCache?.RegisterObservability(agentId, tenantId, new AgenticTokenStruct(
                             userAuthorization: authSystem,
                             turnContext: turnContext,

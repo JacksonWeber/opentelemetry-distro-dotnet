@@ -42,8 +42,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _options = options ?? throw new ArgumentNullException(nameof(options));
 
-            if (_options.TokenResolver == null)
-                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
+            if (_options.TokenResolver == null && _options.ContextualTokenResolver == null)
+                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver or Agent365ExporterOptions.ContextualTokenResolver must be provided.");
 
             _httpClient = httpClient ?? HttpClientFactory.CreateWithTimeout(options.ExporterTimeoutMilliseconds);
             _resource = resource ?? ResourceBuilder.CreateEmpty().Build();

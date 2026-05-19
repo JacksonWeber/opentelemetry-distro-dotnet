@@ -103,7 +103,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
             if (!string.IsNullOrWhiteSpace(options.AzureMonitor.ConnectionString)
                 || HasAzureMonitorConnectionString(builder.Services))
                 exporters |= ExportTarget.AzureMonitor;
-            if (options.Agent365.TokenResolver != null)
+            if (options.Agent365.TokenResolver != null || options.Agent365.ContextualTokenResolver != null)
                 exporters |= ExportTarget.Agent365;
             
         }
@@ -180,6 +180,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         {
             o.SkipExporter = !exporters.HasFlag(ExportTarget.Agent365);
             o.TokenResolver = options.Agent365.TokenResolver;
+            o.ContextualTokenResolver = options.Agent365.ContextualTokenResolver;
             o.DomainResolver = options.Agent365.DomainResolver;
             o.ClusterCategory = options.Agent365.ClusterCategory;
             o.UseS2SEndpoint = options.Agent365.UseS2SEndpoint;

@@ -2,7 +2,18 @@
 
 ## Unreleased
 
+## 1.0.3 - 2026-05-22
+
+- Fix `gen_ai.tool.arguments` attribute name to `gen_ai.tool.call.arguments` ([#88](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/88))
+- Add product context fallback for subchannels ([#90](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/90))
 - Flatten Agent365 exporter configuration to remove one layer of nesting (remove `.Exporter`) ([#94](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/94))
+- Update telemetry SDK name to `microsoft-opentelemetry` ([#95](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/95))
+- Revert user.id fallback chain — ingest service only accepts GUIDs ([#96](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/96))
+- Scope `ActivityProcessor.OnStart` to GenAI spans only ([#99](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/99))
+- Add `ContextualTokenResolver` with agentic user ID support ([#101](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/101))
+- Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.8.1 ([#102](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/102))
+- Decouple A365 exporter from `Microsoft.Agents.Builder` dependency ([#104](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/104))
+- Align message format to OTel spec: remove version envelope ([#105](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/105))
 
 ## 1.0.2 - 2026-05-06
 

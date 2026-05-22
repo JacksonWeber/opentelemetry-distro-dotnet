@@ -416,3 +416,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# DocFX output
+_site/
+api/
+!docs/api/
+
+# Language server cache
+*.lscache

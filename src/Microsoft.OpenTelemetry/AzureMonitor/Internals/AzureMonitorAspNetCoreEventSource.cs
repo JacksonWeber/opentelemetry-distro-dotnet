@@ -126,5 +126,20 @@ namespace Microsoft.OpenTelemetry
 
         [Event(15, Message = "Invalid sampler argument '{1}' for sampler '{0}'. Ignoring.", Level = EventLevel.Warning)]
         public void InvalidSamplerArgument(string samplerType, string samplerArg) => WriteEvent(15, samplerType, samplerArg);
+
+        [NonEvent]
+        public void DistroFeatureSdkStatsCallbackFailed(System.Exception ex)
+        {
+            if (IsEnabled(EventLevel.Warning))
+            {
+                DistroFeatureSdkStatsCallbackFailed(ex.FlattenException().ToInvariantString());
+            }
+        }
+
+        [Event(16, Message = "Distro Feature SDKStats gauge callback failed: {0}", Level = EventLevel.Warning)]
+        public void DistroFeatureSdkStatsCallbackFailed(string exceptionMessage) => WriteEvent(16, exceptionMessage);
+
+        [Event(17, Message = "Distro Feature SDKStats disabled by environment variable APPLICATIONINSIGHTS_STATSBEAT_DISABLED.", Level = EventLevel.Informational)]
+        public void DistroFeatureSdkStatsDisabledByEnvVar() => WriteEvent(17);
     }
 }

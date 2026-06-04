@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added SDK statistics reporting and routed it to a dedicated Microsoft ingestion path. Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`. Requires `Azure.Monitor.OpenTelemetry.Exporter` 1.9.0-beta.1 or later.
+
 ## 1.0.4 - 2026-06-01
 
 - Add `ApplyGuardrailScope` for security guardrail evaluation tracing ([#109](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/109))

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Bootstrap SDK Stats eagerly in `UseMicrosoftOpenTelemetry` so Attach + Feature SDK Stats are reported when the Azure Monitor exporter is not selected (OTLP-only, Console-only, Agent365-only). Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`. No-op when `ExportTarget.AzureMonitor` is selected (the customer's own exporter triggers SDK Stats) or when no exporters are selected.
 - Added SDK statistics reporting and routed it to a dedicated Microsoft ingestion path. Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`. Requires `Azure.Monitor.OpenTelemetry.Exporter` 1.9.0-beta.1 or later.
 
 ## 1.0.4 - 2026-06-01

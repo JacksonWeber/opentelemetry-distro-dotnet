@@ -130,10 +130,16 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         {
             // Zero-exporter deployments produce no customer telemetry — emitting Attach
             // SDK Stats in that case would be pure noise without a corresponding signal.
+            // Set ExportTarget.None explicitly so the test is deterministic regardless
+            // of ambient APPLICATIONINSIGHTS_CONNECTION_STRING / IConfiguration values
+            // that UseMicrosoftOpenTelemetry's auto-detection would otherwise pick up.
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, null);
 
             var services = new ServiceCollection();
-            services.AddOpenTelemetry().UseMicrosoftOpenTelemetry(_ => { });
+            services.AddOpenTelemetry().UseMicrosoftOpenTelemetry(o =>
+            {
+                o.Exporters = ExportTarget.None;
+            });
 
             Assert.False(SdkStatsPin.IsInitializedForTesting);
         }

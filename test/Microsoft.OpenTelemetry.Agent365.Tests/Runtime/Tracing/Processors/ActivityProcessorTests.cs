@@ -111,6 +111,36 @@ public sealed class ActivityProcessorTests : ActivityTest
     }
 
     /// <summary>
+    /// BaggageBuilder.OperationSource sets service.name in baggage; the processor must
+    /// propagate it onto eligible GenAI spans via the AttributeKeys allow-list.
+    /// </summary>
+    [TestMethod]
+    public void OnStart_PropagatesServiceName_FromOperationSourceBaggage()
+    {
+        // Arrange
+        using var tracerProvider = ConstructTracerProvider();
+        const string serviceName = "ACF";
+
+        // Act - set service.name via OperationSource baggage, then start an eligible GenAI span
+        using (new BaggageBuilder()
+            .OperationSource(serviceName)
+            .Build())
+        {
+            var activity = ListenForActivity(() =>
+            {
+                using var scope = InvokeAgentScope.Start(
+                    new Request(),
+                    new InvokeAgentScopeDetails(endpoint: null),
+                    new AgentDetails("agent-1"));
+            });
+
+            // Assert - processor must coalesce service.name onto the GenAI span
+            activity.GetTagItem(ServiceNameKey).Should().Be(serviceName,
+                because: "BaggageBuilder.OperationSource() must propagate service.name onto eligible GenAI spans");
+        }
+    }
+
+    /// <summary>
     /// The four GenAI scope types (invoke_agent, execute_tool, inference, output_messages)
     /// must have baggage-backed tags coalesced onto them by the processor.
     /// </summary>

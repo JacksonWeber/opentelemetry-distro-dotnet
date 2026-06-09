@@ -101,51 +101,6 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal((long)snapshot.Features, match.value);
         }
 
-        [Fact]
-        public void Initialize_WithStatsbeatPin_DisposesPinOnReset()
-        {
-            var options = new MicrosoftOpenTelemetryOptions();
-            options.AzureMonitor.ConnectionString = ValidConnectionString;
-            var snapshot = DistroFeatureSnapshot.Build(
-                options, ValidConnectionString, ExportTarget.AzureMonitor, false, false, "9.9.9-pin")!;
-
-            var pin = new TrackingDisposable();
-            DistroFeatureSdkStats.Initialize(snapshot, pin);
-
-            Assert.False(pin.Disposed);
-
-            DistroFeatureSdkStats.ResetForTesting();
-
-            Assert.True(pin.Disposed);
-        }
-
-        [Fact]
-        public void Initialize_SecondPin_IsDisposedImmediately()
-        {
-            // The first pin wins for the process lifetime; a second pin supplied while one
-            // is already held must be disposed immediately so we don't leak a transmitter.
-            var options = new MicrosoftOpenTelemetryOptions();
-            options.AzureMonitor.ConnectionString = ValidConnectionString;
-            var snapshot = DistroFeatureSnapshot.Build(
-                options, ValidConnectionString, ExportTarget.AzureMonitor, false, false, "9.9.9-pin")!;
-
-            var firstPin = new TrackingDisposable();
-            var secondPin = new TrackingDisposable();
-
-            DistroFeatureSdkStats.Initialize(snapshot, firstPin);
-            DistroFeatureSdkStats.Initialize(snapshot, secondPin);
-
-            Assert.False(firstPin.Disposed);
-            Assert.True(secondPin.Disposed);
-        }
-
-        private sealed class TrackingDisposable : System.IDisposable
-        {
-            public bool Disposed { get; private set; }
-
-            public void Dispose() => Disposed = true;
-        }
-
         private static List<(long value, Dictionary<string, object?> tags)> CollectObservableMeasurements()
         {
             var results = new List<(long value, Dictionary<string, object?> tags)>();

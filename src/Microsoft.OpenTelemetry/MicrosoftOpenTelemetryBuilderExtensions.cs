@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenTelemetry.AzureMonitor.Internals;
+using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 using global::OpenTelemetry;
 using global::OpenTelemetry.Trace;
 using global::OpenTelemetry.Metrics;
@@ -325,43 +327,10 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         // deployments. Must be called after `exporters` is finalized (to avoid double-pinning
         // when AzureMonitor is selected) and after the AppContext switch above is set (so
         // SDK Stats routes to the distro-owned ingestion endpoint).
-        TryEnsureAttachSdkStatsPin(exporters);
+        SdkStatsPin.EnsureIfApplicable(exporters);
         RegisterDistroFeatureSdkStats(builder.Services, options, exporters, a365OnlyMode);
 
         return builder;
-    }
-
-    /// <summary>
-    /// Eagerly initializes the Attach SDKStats pin. No-op when AzureMonitor is in
-    /// <paramref name="effectiveExporters"/> (the customer's own exporter triggers SDK Stats),
-    /// when <paramref name="effectiveExporters"/> is <see cref="ExportTarget.None"/>, or when
-    /// <c>APPLICATIONINSIGHTS_STATSBEAT_DISABLED</c> is <c>"true"</c>.
-    /// </summary>
-    private static void TryEnsureAttachSdkStatsPin(ExportTarget effectiveExporters)
-    {
-        if (effectiveExporters == ExportTarget.None
-            || effectiveExporters.HasFlag(ExportTarget.AzureMonitor))
-        {
-            return;
-        }
-
-        string? disabled;
-        try
-        {
-            disabled = Environment.GetEnvironmentVariable(
-                Microsoft.OpenTelemetry.AzureMonitor.Internals.EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
-        }
-        catch (Exception)
-        {
-            disabled = null;
-        }
-
-        if (string.Equals(disabled, "true", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        Microsoft.OpenTelemetry.AzureMonitor.SdkStats.AttachSdkStatsPin.Ensure();
     }
 
     private static void RegisterDistroFeatureSdkStats(
@@ -376,7 +345,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         try
         {
             disabled = Environment.GetEnvironmentVariable(
-                Microsoft.OpenTelemetry.AzureMonitor.Internals.EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
+                EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
         }
         catch (Exception)
         {
@@ -385,7 +354,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
 
         if (string.Equals(disabled, "true", StringComparison.OrdinalIgnoreCase))
         {
-            Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsDisabledByEnvVar();
+            AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsDisabledByEnvVar();
             return;
         }
 
@@ -400,7 +369,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                 // Mirror the exporter's opt-in semantics: APPLICATIONINSIGHTS_SDKSTATS_DISABLED
                 // must be set to "false" to enable customer SDK stats.
                 var customerSdkStatsDisabled = Environment.GetEnvironmentVariable(
-                    Microsoft.OpenTelemetry.AzureMonitor.Internals.EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
+                    EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
                 var customerSdkStatsEnabled = string.Equals(customerSdkStatsDisabled, "false", StringComparison.OrdinalIgnoreCase);
 
                 // Resolve the effective connection string the exporter will use at transmit
@@ -414,28 +383,28 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                         ? options.AzureMonitor.ConnectionString
                         : ResolveEffectiveConnectionString(sp);
 
-                var snapshot = Microsoft.OpenTelemetry.AzureMonitor.SdkStats.DistroFeatureSnapshot.Build(
+                var snapshot = DistroFeatureSnapshot.Build(
                     options,
                     effectiveConnectionString,
                     effectiveExporters,
                     customerSdkStatsEnabled,
                     a365OnlyMode,
-                    Microsoft.OpenTelemetry.AzureMonitor.Internals.SdkVersion.Value);
+                    SdkVersion.Value);
 
                 if (snapshot is null)
                 {
                     return;
                 }
 
-                // The Attach SDK Stats pin (eagerly created in TryEnsureAttachSdkStatsPin
+                // The SDK Stats pin (eagerly created in TryEnsureSdkStatsPin
                 // above) already brought up SDK Stats; nothing left for this callback to do
                 // on the pin side.
-                Microsoft.OpenTelemetry.AzureMonitor.SdkStats.DistroFeatureSdkStats.Initialize(snapshot, statsbeatExporterPin: null);
+                DistroFeatureSdkStats.Initialize(snapshot);
             }
             catch (Exception ex)
             {
                 // Stats are best-effort; never let registration failures break user instrumentation.
-                Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
+                AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
             }
         });
     }

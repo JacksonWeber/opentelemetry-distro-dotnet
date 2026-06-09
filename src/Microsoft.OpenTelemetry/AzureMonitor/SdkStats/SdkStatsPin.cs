@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Azure.Monitor.OpenTelemetry.Exporter;
+using Microsoft.OpenTelemetry.AzureMonitor.Internals;
 
 namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 {
@@ -19,10 +20,12 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
     /// <remarks>
     /// The pin is a singleton because the underlying SDK Stats <c>MeterProvider</c> is a
     /// process-wide resource — a second pin would build a second <c>MeterProvider</c> and
-    /// double-report Attach measurements. <see cref="Ensure"/> is idempotent and
-    /// thread-safe via <see cref="Interlocked.CompareExchange{T}"/>.
+    /// double-report Attach measurements. <see cref="EnsureIfApplicable"/> is the
+    /// production entry point and owns the kill-switch / exporter-selection policy;
+    /// <see cref="Ensure"/> is the unguarded primitive intended for unit tests only.
+    /// Both are idempotent and thread-safe via <see cref="Interlocked.CompareExchange{T}"/>.
     /// </remarks>
-    internal static class AttachSdkStatsPin
+    internal static class SdkStatsPin
     {
         // InstrumentationKey=N/A matches the SDK Stats spec convention for deployments
         // without a customer Application Insights resource. The IngestionEndpoint host
@@ -35,15 +38,50 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         private static AzureMonitorMetricExporter? s_pin;
 
         /// <summary>
-        /// Idempotently constructs the inert exporter pin, triggering SDK Stats
-        /// initialization as a constructor side effect.
+        /// Production entry point. Idempotently initializes the pin when the supplied
+        /// exporter selection requires the distro to bootstrap SDK Stats itself, and
+        /// the <c>APPLICATIONINSIGHTS_STATSBEAT_DISABLED</c> kill switch is not set.
+        /// No-op when AzureMonitor is in <paramref name="effectiveExporters"/> (the
+        /// customer's own exporter triggers SDK Stats) or when
+        /// <paramref name="effectiveExporters"/> is <see cref="ExportTarget.None"/>.
+        /// </summary>
+        internal static void EnsureIfApplicable(ExportTarget effectiveExporters)
+        {
+            if (effectiveExporters == ExportTarget.None
+                || effectiveExporters.HasFlag(ExportTarget.AzureMonitor))
+            {
+                return;
+            }
+
+            string? disabled;
+            try
+            {
+                disabled = Environment.GetEnvironmentVariable(
+                    EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
+            }
+            catch (Exception)
+            {
+                disabled = null;
+            }
+
+            if (string.Equals(disabled, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Ensure();
+        }
+
+        /// <summary>
+        /// Unguarded primitive that idempotently constructs the inert exporter pin,
+        /// triggering SDK Stats initialization as a constructor side effect.
         /// </summary>
         /// <remarks>
-        /// Caller is responsible for the kill-switch check
-        /// (<c>APPLICATIONINSIGHTS_STATSBEAT_DISABLED</c>) and for skipping when the
-        /// customer has selected the Azure Monitor exporter. Exceptions are logged to
-        /// the distro event source and swallowed; SDKStats are best-effort and must not
-        /// break customer instrumentation.
+        /// Production code must go through <see cref="EnsureIfApplicable"/> so the
+        /// kill switch and exporter-selection policy are honored. This method is kept
+        /// internal for unit tests that exercise the pin in isolation. Exceptions are
+        /// logged to the distro event source and swallowed; SDKStats are best-effort
+        /// and must not break customer instrumentation.
         /// </remarks>
         internal static void Ensure()
         {
@@ -63,7 +101,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
             catch (Exception ex)
             {
-                Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.AttachSdkStatsPinFailed(ex);
+                Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.SdkStatsPinFailed(ex);
                 return;
             }
 
@@ -74,7 +112,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 return;
             }
 
-            Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.AttachSdkStatsPinInitialized();
+            Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.SdkStatsPinInitialized();
         }
 
         /// <summary>

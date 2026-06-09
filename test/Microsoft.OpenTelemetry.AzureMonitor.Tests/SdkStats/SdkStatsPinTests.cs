@@ -10,7 +10,7 @@ using Xunit;
 namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 {
     /// <summary>
-    /// Tests for <see cref="AttachSdkStatsPin"/> and the eager-pin glue in
+    /// Tests for <see cref="SdkStatsPin"/> and the eager-pin glue in
     /// <see cref="MicrosoftOpenTelemetryBuilderExtensions.UseMicrosoftOpenTelemetry{TBuilder}"/>.
     /// The pin is a process-wide singleton that triggers the Azure Monitor exporter's
     /// SDK Stats MeterProvider (and the Attach observable gauge it owns) as a ctor-time
@@ -19,24 +19,24 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
     /// SdkStats namespace don't race on the process-wide singleton state.
     /// </summary>
     [Collection(nameof(DistroFeatureSdkStatsCollection))]
-    public class AttachSdkStatsPinTests : IDisposable
+    public class SdkStatsPinTests : IDisposable
     {
         private const string KillSwitchEnvVar = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
 
         private readonly string? _previousKillSwitch;
 
-        public AttachSdkStatsPinTests()
+        public SdkStatsPinTests()
         {
             _previousKillSwitch = Environment.GetEnvironmentVariable(KillSwitchEnvVar);
             // Default each test to "stats off" so we don't fire real HTTP traffic during
             // CI unless the test explicitly opts in by clearing the env var.
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, "true");
-            AttachSdkStatsPin.ResetForTesting();
+            SdkStatsPin.ResetForTesting();
         }
 
         public void Dispose()
         {
-            AttachSdkStatsPin.ResetForTesting();
+            SdkStatsPin.ResetForTesting();
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, _previousKillSwitch);
         }
 
@@ -46,11 +46,11 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             // Allow the pin to construct for this test only.
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, null);
 
-            Assert.False(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.False(SdkStatsPin.IsInitializedForTesting);
 
-            AttachSdkStatsPin.Ensure();
+            SdkStatsPin.Ensure();
 
-            Assert.True(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.True(SdkStatsPin.IsInitializedForTesting);
         }
 
         [Fact]
@@ -58,26 +58,26 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         {
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, null);
 
-            AttachSdkStatsPin.Ensure();
-            AttachSdkStatsPin.Ensure();
-            AttachSdkStatsPin.Ensure();
+            SdkStatsPin.Ensure();
+            SdkStatsPin.Ensure();
+            SdkStatsPin.Ensure();
 
             // No exception, still initialized — the singleton guards against duplicate
             // SDK Stats MeterProviders (which would cause duplicate Attach
             // emissions on every export cycle).
-            Assert.True(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.True(SdkStatsPin.IsInitializedForTesting);
         }
 
         [Fact]
         public void ResetForTesting_ClearsTheSingleton()
         {
             Environment.SetEnvironmentVariable(KillSwitchEnvVar, null);
-            AttachSdkStatsPin.Ensure();
-            Assert.True(AttachSdkStatsPin.IsInitializedForTesting);
+            SdkStatsPin.Ensure();
+            Assert.True(SdkStatsPin.IsInitializedForTesting);
 
-            AttachSdkStatsPin.ResetForTesting();
+            SdkStatsPin.ResetForTesting();
 
-            Assert.False(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.False(SdkStatsPin.IsInitializedForTesting);
         }
 
         [Fact]
@@ -94,9 +94,9 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             });
 
             Assert.True(
-                AttachSdkStatsPin.IsInitializedForTesting,
+                SdkStatsPin.IsInitializedForTesting,
                 "UseMicrosoftOpenTelemetry with an exporter other than AzureMonitor must " +
-                "eagerly initialize the Attach SDK Stats pin so the SDK Stats MeterProvider " +
+                "eagerly initialize the SDK Stats pin so the SDK Stats MeterProvider " +
                 "comes up and Attach measurements flow on the 24-hour cadence.");
         }
 
@@ -119,8 +119,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             });
 
             Assert.False(
-                AttachSdkStatsPin.IsInitializedForTesting,
-                "The eager Attach SDK Stats pin must not run when the customer selected the " +
+                SdkStatsPin.IsInitializedForTesting,
+                "The eager SDK Stats pin must not run when the customer selected the " +
                 "AzureMonitor exporter — their own exporter is responsible for bootstrapping " +
                 "SDK Stats and a second pin would emit duplicate Attach measurements.");
         }
@@ -135,7 +135,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             var services = new ServiceCollection();
             services.AddOpenTelemetry().UseMicrosoftOpenTelemetry(_ => { });
 
-            Assert.False(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.False(SdkStatsPin.IsInitializedForTesting);
         }
 
         [Fact]
@@ -151,7 +151,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                 o.Exporters = ExportTarget.Otlp;
             });
 
-            Assert.False(AttachSdkStatsPin.IsInitializedForTesting);
+            Assert.False(SdkStatsPin.IsInitializedForTesting);
         }
     }
 }

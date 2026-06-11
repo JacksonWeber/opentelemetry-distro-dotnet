@@ -141,5 +141,20 @@ namespace Microsoft.OpenTelemetry
 
         [Event(17, Message = "Distro Feature SDKStats disabled by environment variable APPLICATIONINSIGHTS_STATSBEAT_DISABLED.", Level = EventLevel.Informational)]
         public void DistroFeatureSdkStatsDisabledByEnvVar() => WriteEvent(17);
+
+        [Event(18, Message = "SDK Stats pin initialized; inert AzureMonitorMetricExporter constructed to bootstrap SDK Stats in a deployment that does not include the Azure Monitor exporter.", Level = EventLevel.Informational)]
+        public void SdkStatsPinInitialized() => WriteEvent(18);
+
+        [NonEvent]
+        public void SdkStatsPinFailed(System.Exception ex)
+        {
+            if (IsEnabled(EventLevel.Warning))
+            {
+                SdkStatsPinFailed(ex.FlattenException().ToInvariantString());
+            }
+        }
+
+        [Event(19, Message = "Failed to initialize SDK Stats pin: {0}. Attach SDK Stats will not be reported for this process.", Level = EventLevel.Warning)]
+        public void SdkStatsPinFailed(string exceptionMessage) => WriteEvent(19, exceptionMessage);
     }
 }

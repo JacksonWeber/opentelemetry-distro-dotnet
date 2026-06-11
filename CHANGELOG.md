@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Added SDK statistics reporting and routed it to a dedicated Microsoft ingestion path. Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`. Requires `Azure.Monitor.OpenTelemetry.Exporter` 1.9.0-beta.1 or later.
+- Bootstrap SDK Stats eagerly in `UseMicrosoftOpenTelemetry` so Attach + Feature SDK Stats are reported when the Azure Monitor exporter is not selected (OTLP-only, Console-only, Agent365-only).
+- Added SDK statistics reporting and routed it to a dedicated Microsoft ingestion path. Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`.
 - Fix `service.name` propagation: add `ServiceNameKey` to `ActivityProcessor`'s attribute allow-list so `BaggageBuilder.OperationSource(...)` is copied onto eligible GenAI spans ([#118](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/118))
 
 ## 1.0.4 - 2026-06-01

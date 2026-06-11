@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenTelemetry.AzureMonitor.Internals;
+using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 using global::OpenTelemetry;
 using global::OpenTelemetry.Trace;
 using global::OpenTelemetry.Metrics;
@@ -93,7 +95,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
 
         // Route SDK statistics emitted in this process to the distro-owned ingestion
         // endpoints instead of the legacy internal Application Insights resources. The
-        // switch is honored by Azure.Monitor.OpenTelemetry.Exporter's AzureMonitorStatsbeat
+        // switch is honored by Azure.Monitor.OpenTelemetry.Exporter's SDK Stats subsystem
         // and applies to every AzureMonitorMetricExporter constructed after this point —
         // including the customer's own exporter when running under the distro. Must be set
         // before any exporter is constructed (the ctor triggers SDK statistics init).
@@ -320,18 +322,12 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
             }
         }
 
-        // --- Distro Feature SDKStats ---
-        // Publishes a single observable gauge on a distro-owned meter. The Azure Monitor
-        // exporter's Statsbeat MeterProvider subscribes to that meter by name and ships
-        // the measurements on the existing 24-hour Statsbeat cadence.
-        //
-        // The producer is registered regardless of which exporter the customer selected.
-        // When Azure Monitor is selected, the customer's own AzureMonitorMetricExporter
-        // construction already creates the Statsbeat MeterProvider. When it is not, the
-        // distro instantiates an inert AzureMonitorMetricExporter purely for its ctor-time
-        // side effect of creating the Statsbeat MeterProvider (see RegisterDistroFeatureSdkStats).
-        // Either way, the Feature gauge flows through Statsbeat to the Microsoft-owned
-        // SDKStats Application Insights resource.
+        // Bootstrap SDK Stats eagerly when no Azure Monitor exporter is selected so that
+        // Attach + Feature SDK Stats are reported in OTLP-only / Console-only / Agent365-only
+        // deployments. Must be called after `exporters` is finalized (to avoid double-pinning
+        // when AzureMonitor is selected) and after the AppContext switch above is set (so
+        // SDK Stats routes to the distro-owned ingestion endpoint).
+        SdkStatsPin.EnsureIfApplicable(exporters);
         RegisterDistroFeatureSdkStats(builder.Services, options, exporters, a365OnlyMode);
 
         return builder;
@@ -349,7 +345,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         try
         {
             disabled = Environment.GetEnvironmentVariable(
-                Microsoft.OpenTelemetry.AzureMonitor.Internals.EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
+                EnvironmentVariableConstants.APPLICATIONINSIGHTS_STATSBEAT_DISABLED);
         }
         catch (Exception)
         {
@@ -358,7 +354,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
 
         if (string.Equals(disabled, "true", StringComparison.OrdinalIgnoreCase))
         {
-            Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsDisabledByEnvVar();
+            AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsDisabledByEnvVar();
             return;
         }
 
@@ -373,7 +369,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                 // Mirror the exporter's opt-in semantics: APPLICATIONINSIGHTS_SDKSTATS_DISABLED
                 // must be set to "false" to enable customer SDK stats.
                 var customerSdkStatsDisabled = Environment.GetEnvironmentVariable(
-                    Microsoft.OpenTelemetry.AzureMonitor.Internals.EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
+                    EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
                 var customerSdkStatsEnabled = string.Equals(customerSdkStatsDisabled, "false", StringComparison.OrdinalIgnoreCase);
 
                 // Resolve the effective connection string the exporter will use at transmit
@@ -387,84 +383,30 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                         ? options.AzureMonitor.ConnectionString
                         : ResolveEffectiveConnectionString(sp);
 
-                var snapshot = Microsoft.OpenTelemetry.AzureMonitor.SdkStats.DistroFeatureSnapshot.Build(
+                var snapshot = DistroFeatureSnapshot.Build(
                     options,
                     effectiveConnectionString,
                     effectiveExporters,
                     customerSdkStatsEnabled,
                     a365OnlyMode,
-                    Microsoft.OpenTelemetry.AzureMonitor.Internals.SdkVersion.Value);
+                    SdkVersion.Value);
 
                 if (snapshot is null)
                 {
                     return;
                 }
 
-                // When the customer hasn't selected Azure Monitor, no AzureMonitorMetricExporter
-                // is constructed in this process — which means the Statsbeat MeterProvider that
-                // subscribes to our distro meter never comes up. To plug that gap, we build an
-                // inert exporter pointed at a placeholder connection string. We never attach it
-                // to any reader, so it ships nothing itself; we hold it solely for its ctor-time
-                // side effect of triggering Statsbeat initialization (which then subscribes to
-                // our meter by name and ships the Feature measurement to the Microsoft Statsbeat
-                // resource on the standard 24-hour cadence).
-                IDisposable? statsbeatPin = null;
-                if (!effectiveExporters.HasFlag(ExportTarget.AzureMonitor))
-                {
-                    statsbeatPin = TryCreateStatsbeatPin();
-                }
-
-                Microsoft.OpenTelemetry.AzureMonitor.SdkStats.DistroFeatureSdkStats.Initialize(snapshot, statsbeatPin);
+                // The SDK Stats pin (eagerly created in TryEnsureSdkStatsPin
+                // above) already brought up SDK Stats; nothing left for this callback to do
+                // on the pin side.
+                DistroFeatureSdkStats.Initialize(snapshot);
             }
             catch (Exception ex)
             {
                 // Stats are best-effort; never let registration failures break user instrumentation.
-                Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
+                AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
             }
         });
-    }
-
-    /// <summary>
-    /// Constructs an inert <see cref="Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorMetricExporter"/>
-    /// whose only purpose is to trigger the Statsbeat <c>MeterProvider</c> side effect inside
-    /// the exporter's transmitter factory. The exporter is never attached to any reader.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Uses a placeholder connection string with <c>InstrumentationKey=N/A</c> routed to the
-    /// non-EU Statsbeat ingestion region. <see cref="Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions.DisableOfflineStorage"/>
-    /// is set to <c>true</c> so no offline-retry directory is created (the inert exporter
-    /// never receives metrics, but we defend against any incidental I/O).
-    /// </para>
-    /// <para>
-    /// Returns <see langword="null"/> if construction fails for any reason. Stats are
-    /// best-effort — a failure here must not break customer instrumentation.
-    /// </para>
-    /// </remarks>
-    private static IDisposable? TryCreateStatsbeatPin()
-    {
-        try
-        {
-            // Default routing: non-EU. The exporter team owns EU vs non-EU region selection
-            // based on the IngestionEndpoint host; westus-0 matches the non-EU pattern.
-            // "N/A" cikey is consistent with the SDKStats spec convention for deployments
-            // without a customer Application Insights resource.
-            const string placeholderConnectionString =
-                "InstrumentationKey=N/A;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/";
-
-            var exporterOptions = new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
-            {
-                ConnectionString = placeholderConnectionString,
-                DisableOfflineStorage = true,
-            };
-
-            return new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorMetricExporter(exporterOptions);
-        }
-        catch (Exception ex)
-        {
-            Microsoft.OpenTelemetry.AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
-            return null;
-        }
     }
 
     private static string? ResolveEffectiveConnectionString(IServiceProvider sp)

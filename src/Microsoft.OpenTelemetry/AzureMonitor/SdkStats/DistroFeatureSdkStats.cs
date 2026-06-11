@@ -53,7 +53,6 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 
         private readonly Meter _meter;
         private DistroFeatureSnapshot _snapshot;
-        private IDisposable? _statsbeatExporterPin;
 
         private DistroFeatureSdkStats(DistroFeatureSnapshot snapshot)
         {
@@ -74,24 +73,21 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         /// snapshot. Safe to call repeatedly; the most recent snapshot wins.
         /// </summary>
         /// <param name="snapshot">Bit map + cikey + distro version describing the configuration.</param>
-        /// <param name="statsbeatExporterPin">
-        /// Optional <see cref="IDisposable"/> kept alive for the lifetime of this singleton.
-        /// Used by the distro to pin an inert <c>AzureMonitorMetricExporter</c> whose
-        /// construction side-effect creates the Statsbeat <c>MeterProvider</c> that ships
-        /// our <c>Feature</c> measurement when the customer hasn't selected the Azure
-        /// Monitor exporter. Pass <see langword="null"/> when the customer's own Azure
-        /// Monitor exporter already triggers Statsbeat for the process.
-        /// </param>
-        internal static DistroFeatureSdkStats Initialize(
-            DistroFeatureSnapshot snapshot,
-            IDisposable? statsbeatExporterPin = null)
+        /// <remarks>
+        /// The Statsbeat <c>MeterProvider</c> that ships our <c>Feature</c> measurement is
+        /// brought up either by the customer's own <c>AzureMonitorMetricExporter</c> (when
+        /// Azure Monitor is selected) or by the distro's process-wide
+        /// <c>SdkStatsPin</c> (eagerly created in
+        /// <c>MicrosoftOpenTelemetryBuilderExtensions.TryEnsureSdkStatsPin</c>) when
+        /// it is not. Either way, the pin's lifetime is managed outside this class.
+        /// </remarks>
+        internal static DistroFeatureSdkStats Initialize(DistroFeatureSnapshot snapshot)
         {
             if (snapshot is null)
             {
                 throw new ArgumentNullException(nameof(snapshot));
             }
 
-            DistroFeatureSdkStats current;
             lock (s_lock)
             {
                 if (s_instance is null)
@@ -111,22 +107,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                     Volatile.Write(ref s_instance._snapshot, snapshot);
                 }
 
-                current = s_instance;
-
-                // The first pin wins for the process lifetime. If a second call supplies a
-                // pin while one is already held, dispose the redundant one immediately —
-                // the cached transmitter behind it lives in TransmitterFactory and will
-                // continue to serve the already-attached Statsbeat MeterProvider.
-                if (statsbeatExporterPin != null)
-                {
-                    if (Interlocked.CompareExchange(ref current._statsbeatExporterPin, statsbeatExporterPin, null) != null)
-                    {
-                        try { statsbeatExporterPin.Dispose(); } catch { /* best effort */ }
-                    }
-                }
+                return s_instance;
             }
-
-            return current;
         }
 
         /// <summary>
@@ -145,7 +127,6 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         public void Dispose()
         {
             _meter.Dispose();
-            try { _statsbeatExporterPin?.Dispose(); } catch { /* best effort */ }
         }
 
         private IEnumerable<Measurement<long>> Observe()

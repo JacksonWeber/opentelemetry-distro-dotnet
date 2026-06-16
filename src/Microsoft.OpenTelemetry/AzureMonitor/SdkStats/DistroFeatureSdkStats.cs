@@ -163,10 +163,13 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
 
             // Throttle to the 24 hr cadence: skip collections inside the window. Delta
-            // temporality means a skipped collection exports nothing.
+            // temporality means a skipped collection exports nothing. A negative elapsed value
+            // means the wall clock jumped backwards (e.g. NTP/VM sync); treat that as eligible
+            // so a backwards jump re-anchors the window instead of suppressing for up to 24 hr.
             long previousTicks = Volatile.Read(ref _lastEmissionTicks);
             long nowTicks = DateTime.UtcNow.Ticks;
-            if (previousTicks != 0 && nowTicks - previousTicks < EmissionInterval.Ticks)
+            long elapsedTicks = nowTicks - previousTicks;
+            if (previousTicks != 0 && elapsedTicks >= 0 && elapsedTicks < EmissionInterval.Ticks)
             {
                 return EmptyMeasurements;
             }

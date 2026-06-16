@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Throttle distro Feature SDK Stats to a 24-hour emission cadence. The exporter now collects Feature SDK Stats on the shared 15-minute Network SDK Stats reader, so the observable gauge applies an emission-ticks throttle (mirroring the Attach gauge) to avoid emitting every 15 minutes.
+
 ## 1.0.5 - 2026-06-12
 
 - Bootstrap SDK Stats eagerly in `UseMicrosoftOpenTelemetry` so Attach + Feature SDK Stats are reported when the Azure Monitor exporter is not selected (OTLP-only, Console-only, Agent365-only).

@@ -101,6 +101,51 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal((long)snapshot.Features, match.value);
         }
 
+        [Fact]
+        public void Observe_ThrottlesToSingleEmission_AcrossRapidCollections()
+        {
+            // The exporter collects this gauge on the shared 15-minute reader. Verify the
+            // throttle holds it to one emission per 24 hr window so Feature stats don't ship
+            // every 15 min.
+            var options = new MicrosoftOpenTelemetryOptions();
+            options.AzureMonitor.ConnectionString = ValidConnectionString;
+
+            var snapshot = DistroFeatureSnapshot.Build(
+                options,
+                ValidConnectionString,
+                ExportTarget.AzureMonitor,
+                customerSdkStatsEnabled: false,
+                a365OnlyMode: false,
+                distroVersion: "9.9.9-throttle")!;
+
+            DistroFeatureSdkStats.Initialize(snapshot);
+
+            const int simulatedCollections = 5;
+            int emissions = 0;
+            using var listener = new MeterListener
+            {
+                InstrumentPublished = (instrument, l) =>
+                {
+                    if (instrument.Meter.Name == DistroFeatureSdkStats.MeterName
+                        && instrument.Name == DistroFeatureSdkStats.MetricName)
+                    {
+                        l.EnableMeasurementEvents(instrument);
+                    }
+                },
+            };
+            listener.SetMeasurementEventCallback<long>((_, _, _, _) => emissions++);
+            listener.Start();
+
+            for (int i = 0; i < simulatedCollections; i++)
+            {
+                listener.RecordObservableInstruments();
+            }
+
+            // 5 collections at the 15-min cadence, but the throttle allows only one until the
+            // 24 hr window elapses.
+            Assert.Equal(1, emissions);
+        }
+
         private static List<(long value, Dictionary<string, object?> tags)> CollectObservableMeasurements()
         {
             var results = new List<(long value, Dictionary<string, object?> tags)>();

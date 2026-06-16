@@ -13,8 +13,9 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
     /// Owns the distro's Feature SDKStats meter and observable gauge. The Azure Monitor
     /// exporter's Statsbeat <c>MeterProvider</c> subscribes to the meter name advertised by
     /// this class (see <c>StatsbeatConstants.DistroFeatureSdkStatsMeterName</c> in the
-    /// exporter), so measurements are exported on the existing 24-hour Statsbeat cadence
-    /// without any further wiring on the distro side.
+    /// exporter). That provider collects on the shared 15-minute reader, so this gauge
+    /// throttles to one emission per <see cref="EmissionInterval"/> (24 hr) instead of
+    /// shipping every 15 min.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -46,6 +47,13 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         /// <summary>Meter version reported alongside <see cref="MeterName"/>.</summary>
         internal const string MeterVersion = "1.0";
 
+        /// <summary>
+        /// Minimum time between Feature SDKStats emissions. Feature stats share the exporter's
+        /// 15-minute reader but must ship on the 24 hr cadence, so <see cref="Observe"/>
+        /// throttles to one emission per interval (matches the exporter's Attach gauge).
+        /// </summary>
+        internal static readonly TimeSpan EmissionInterval = TimeSpan.FromHours(24);
+
         private static DistroFeatureSdkStats? s_instance;
         private static readonly object s_lock = new();
 
@@ -53,6 +61,10 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 
         private readonly Meter _meter;
         private DistroFeatureSnapshot _snapshot;
+
+        // Throttle so the Feature gauge emits at most once per EmissionInterval even though
+        // the shared reader collects every 15 min.
+        private long _lastEmissionTicks;
 
         private DistroFeatureSdkStats(DistroFeatureSnapshot snapshot)
         {
@@ -150,6 +162,21 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 return EmptyMeasurements;
             }
 
+            // Throttle to the 24 hr cadence: skip collections inside the window. Delta
+            // temporality means a skipped collection exports nothing.
+            long previousTicks = Volatile.Read(ref _lastEmissionTicks);
+            long nowTicks = DateTime.UtcNow.Ticks;
+            if (previousTicks != 0 && nowTicks - previousTicks < EmissionInterval.Ticks)
+            {
+                return EmptyMeasurements;
+            }
+
+            // CAS so a racing collection can't double-emit.
+            if (Interlocked.CompareExchange(ref _lastEmissionTicks, nowTicks, previousTicks) != previousTicks)
+            {
+                return EmptyMeasurements;
+            }
+
             try
             {
                 var measurement = new Measurement<long>(
@@ -168,6 +195,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             catch (Exception ex)
             {
                 AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsCallbackFailed(ex);
+                // Rewind so we retry on the next collection.
+                Volatile.Write(ref _lastEmissionTicks, previousTicks);
                 return EmptyMeasurements;
             }
         }

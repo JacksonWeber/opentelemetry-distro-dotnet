@@ -150,3 +150,13 @@ Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDe
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.RequestParameters.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters?
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.ResponseParameters.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters?
 Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.InvokeAgentScope.RecordResponseParameters(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters! responseParameters) -> void
+Microsoft.OpenTelemetry.MultiInstance.MultiInstanceTelemetry
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.ActivitySource.get -> System.Diagnostics.ActivitySource!
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.BeginScope() -> System.IDisposable!
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.Dispose() -> void
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.ForceFlush(int timeoutMilliseconds = 10000) -> void
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.Logger.get -> Microsoft.Extensions.Logging.ILogger!
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.Meter.get -> System.Diagnostics.Metrics.Meter!
+Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance.Name.get -> string!
+static Microsoft.OpenTelemetry.MultiInstance.MultiInstanceTelemetry.CreateAzureMonitorInstance(string! name, string! connectionString, params string![]! sharedSources) -> Microsoft.OpenTelemetry.MultiInstance.TelemetryInstance!

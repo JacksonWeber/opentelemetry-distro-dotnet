@@ -7,17 +7,11 @@ using OpenTelemetry;
 namespace Microsoft.OpenTelemetry.MultiInstance;
 
 /// <summary>
-/// A <see cref="BatchActivityExportProcessor"/> that only forwards activities stamped with its own
-/// telemetry-instance id, dropping everything else. This is what prevents fan-out: when several
-/// isolated <c>TracerProvider</c>s listen to the same shared <c>ActivitySource</c>, each one sees
-/// every activity, but only the matching instance actually exports it.
+/// A <see cref="BatchActivityExportProcessor"/> that forwards only activities stamped with its own
+/// instance id, dropping the rest. This prevents fan-out when several isolated providers listen to
+/// the same shared source. It subclasses the batch processor (rather than wrapping it) so the SDK's
+/// <c>SetParentProvider</c> wiring stays intact and the exporter keeps this instance's Resource.
 /// </summary>
-/// <remarks>
-/// We subclass the real batch processor rather than wrapping it because the OpenTelemetry SDK wires
-/// the registered processor directly via <c>SetParentProvider</c> (which is not overridable).
-/// Subclassing keeps that wiring intact, so the genuine Azure Monitor exporter still receives this
-/// instance's <c>Resource</c> — preserving the per-instance cloud role name.
-/// </remarks>
 internal sealed class GatingActivityExportProcessor : BatchActivityExportProcessor
 {
     private readonly string _instanceId;

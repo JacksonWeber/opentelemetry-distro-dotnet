@@ -25,7 +25,8 @@ public static class MultiInstanceTelemetry
     /// </param>
     /// <returns>An isolated <see cref="TelemetryInstance"/> handle.</returns>
     /// <exception cref="ArgumentException">
-    /// <paramref name="name"/> or <paramref name="connectionString"/> is null or whitespace.
+    /// <paramref name="name"/> or <paramref name="connectionString"/> is null or whitespace, or a
+    /// <paramref name="sharedSources"/> entry is null or whitespace.
     /// </exception>
     public static TelemetryInstance CreateAzureMonitorInstance(
         string name,
@@ -42,6 +43,15 @@ public static class MultiInstanceTelemetry
             throw new ArgumentException("Connection string is required.", nameof(connectionString));
         }
 
-        return new TelemetryInstance(name, connectionString, sharedSources ?? Array.Empty<string>());
+        sharedSources ??= Array.Empty<string>();
+        foreach (var source in sharedSources)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                throw new ArgumentException("Shared source names cannot be null or whitespace.", nameof(sharedSources));
+            }
+        }
+
+        return new TelemetryInstance(name, connectionString, sharedSources);
     }
 }

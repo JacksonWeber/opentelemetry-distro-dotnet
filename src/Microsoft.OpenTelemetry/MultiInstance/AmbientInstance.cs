@@ -4,8 +4,7 @@
 namespace Microsoft.OpenTelemetry.MultiInstance;
 
 /// <summary>
-/// Holds the ambient "current telemetry instance" id for the executing async flow. This is the
-/// .NET analog of JavaScript's <c>AsyncLocalStorage</c> / Python's <c>ContextVar</c>.
+/// Holds the current telemetry-instance id for the executing async flow, using <see cref="AsyncLocal{T}"/>.
 /// </summary>
 /// <remarks>
 /// The value flows with the logical call context (async/await, <c>Task.Run</c>, etc.) on the

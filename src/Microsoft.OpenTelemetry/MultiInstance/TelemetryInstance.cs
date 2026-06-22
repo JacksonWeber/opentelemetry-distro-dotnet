@@ -14,24 +14,16 @@ using OpenTelemetry.Trace;
 namespace Microsoft.OpenTelemetry.MultiInstance;
 
 /// <summary>
-/// A fully isolated telemetry pipeline (traces, logs, and metrics) that exports to one specific
-/// Azure Monitor resource. Multiple instances can coexist in the same process without clobbering
-/// each other, and none of them is registered as the process-global provider.
+/// A fully isolated telemetry pipeline (traces, logs, and metrics) that exports to one Azure
+/// Monitor resource. Multiple instances coexist in one process without clobbering each other, and
+/// none is registered as the process-global provider.
 /// </summary>
 /// <remarks>
-/// <para>
-/// .NET has no process-global provider that every telemetry call routes through (tracing flows
-/// through <see cref="ActivitySource"/> and <c>ActivityListener</c>), so a naive "one
-/// <c>TracerProvider</c> per instance" fans out — a single <see cref="Activity"/> is delivered to
-/// every provider listening to the source. This type prevents that by stamping each activity with
-/// the owning instance id at start (<see cref="InstanceStampProcessor"/>) and gating export so each
-/// instance only emits its own activities (<see cref="GatingActivityExportProcessor"/>).
-/// </para>
-/// <para>Two usage modes are supported:</para>
-/// <list type="bullet">
-///   <item>Global/shared <see cref="ActivitySource"/> routed by <see cref="BeginScope"/>.</item>
-///   <item>Direct handles via <see cref="ActivitySource"/>, <see cref="Logger"/>, and <see cref="Meter"/>.</item>
-/// </list>
+/// Because an <see cref="Activity"/> is a single shared object observed by every listener, a plain
+/// provider-per-instance fans out. This type stamps each activity with its owning instance id at
+/// start (<see cref="InstanceStampProcessor"/>) and gates export to that id
+/// (<see cref="GatingActivityExportProcessor"/>). Spans route via <see cref="BeginScope"/> (shared
+/// source) or via the direct <see cref="ActivitySource"/>, <see cref="Logger"/>, and <see cref="Meter"/>.
 /// </remarks>
 public sealed class TelemetryInstance : IDisposable
 {
@@ -44,22 +36,21 @@ public sealed class TelemetryInstance : IDisposable
     internal TelemetryInstance(string name, string connectionString, IReadOnlyList<string> sharedSources)
     {
         Name = name;
-        Id = name;
-        var privateSourceName = $"{name}.Direct";
+
+        // Unique id so two instances with the same name stay isolated (the id is what gets stamped
+        // and gated). The private source name embeds it so direct-handle spans never collide.
+        Id = Guid.NewGuid().ToString("N");
+        var privateSourceName = $"{name}.Direct.{Id}";
 
         ActivitySource = new ActivitySource(privateSourceName);
-        Meter = new Meter($"{name}.Meter");
+        Meter = new Meter($"{name}.Meter.{Id}");
 
-        // service.name -> Azure Monitor cloud role name, so each resource is clearly labelled.
+        // service.name -> Azure Monitor cloud role name.
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName: name, serviceInstanceId: $"{name}-{Environment.MachineName}");
 
-        // ── Traces ──────────────────────────────────────────────────────────────────────
-        // Standalone TracerProvider (never set as the global default). Listens to this
-        // instance's private source plus any shared sources used for ambient routing. The
-        // stamp processor marks each activity with the owning instance id; the gating export
-        // processor drops anything not belonging to this instance, so a shared ActivitySource
-        // fans in to exactly one resource.
+        // Traces: standalone provider (never the global default). Stamp marks the owning instance;
+        // the gating processor drops activities belonging to other instances.
         var traceExporter = new AzureMonitorTraceExporter(new AzureMonitorExporterOptions
         {
             ConnectionString = connectionString,
@@ -67,7 +58,6 @@ public sealed class TelemetryInstance : IDisposable
 
         var tracerBuilder = Sdk.CreateTracerProviderBuilder()
             .SetResourceBuilder(resourceBuilder)
-            .SetSampler(new AlwaysOnSampler())
             .AddSource(privateSourceName)
             .AddProcessor(new InstanceStampProcessor(Id, privateSourceName))
             .AddProcessor(new GatingActivityExportProcessor(Id, traceExporter, _ => Interlocked.Increment(ref _exportedSpanCount)));
@@ -79,19 +69,14 @@ public sealed class TelemetryInstance : IDisposable
 
         _tracerProvider = tracerBuilder.Build();
 
-        // ── Metrics ─────────────────────────────────────────────────────────────────────
-        // Private MeterProvider listens only to this instance's Meter, so no fan-out and no
-        // gating is needed. (Meter measurements carry no ambient context, so ambient routing
-        // does not apply — each instance owns its own Meter.)
+        // Metrics: private MeterProvider listens only to this instance's Meter, so no gating needed.
         _meterProvider = Sdk.CreateMeterProviderBuilder()
             .SetResourceBuilder(resourceBuilder)
             .AddMeter(Meter.Name)
             .AddAzureMonitorMetricExporter(o => o.ConnectionString = connectionString)
             .Build();
 
-        // ── Logs ────────────────────────────────────────────────────────────────────────
-        // Private LoggerFactory with its own OpenTelemetry logging pipeline and Azure Monitor
-        // log exporter. The app logs through Logger, so records go only here.
+        // Logs: private LoggerFactory with its own Azure Monitor log exporter.
         _loggerFactory = LoggerFactory.Create(logging =>
         {
             logging.AddOpenTelemetry(otel =>
@@ -112,7 +97,7 @@ public sealed class TelemetryInstance : IDisposable
     /// <summary>Gets the stable id used to route telemetry to this instance.</summary>
     internal string Id { get; }
 
-    /// <summary>Gets an <see cref="ActivitySource"/> bound directly to this instance — spans from it always export here.</summary>
+    /// <summary>Gets an <see cref="ActivitySource"/> bound directly to this instance.</summary>
     public ActivitySource ActivitySource { get; }
 
     /// <summary>Gets a logger that writes only to this instance's Azure Monitor resource.</summary>
@@ -121,16 +106,12 @@ public sealed class TelemetryInstance : IDisposable
     /// <summary>Gets a <see cref="Meter"/> whose measurements are exported only to this instance's resource.</summary>
     public Meter Meter { get; }
 
-    /// <summary>
-    /// Gets the number of spans this instance has forwarded to its exporter — i.e. the spans that
-    /// passed the instance gate. Used by tests to assert isolation.
-    /// </summary>
+    /// <summary>Gets the number of spans this instance forwarded to its exporter. Used by tests to assert isolation.</summary>
     internal long ExportedSpanCount => Interlocked.Read(ref _exportedSpanCount);
 
     /// <summary>
-    /// Binds this instance as the ambient "current instance" for the executing async flow. While
-    /// the returned scope is active, spans created from any shared <see cref="ActivitySource"/>
-    /// route to this instance's Azure Monitor resource.
+    /// Binds this instance as the current instance for the executing async flow. While the returned
+    /// scope is active, spans from any shared <see cref="ActivitySource"/> route to this instance.
     /// </summary>
     /// <returns>A scope that unbinds this instance when disposed.</returns>
     public IDisposable BeginScope() => AmbientInstance.Use(Id);

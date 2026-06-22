@@ -107,6 +107,37 @@ public class MultiInstanceTelemetryTests
             MultiInstanceTelemetry.CreateAzureMonitorInstance("Telemetry A", connectionString!));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CreateAzureMonitorInstance_Throws_WhenSharedSourceEntryMissing(string? sharedSource)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            MultiInstanceTelemetry.CreateAzureMonitorInstance("Telemetry A", FakeConnectionString(1), "Valid.Source", sharedSource!));
+    }
+
+    [Fact]
+    public void CreateAzureMonitorInstance_WithSameName_StaysIsolated()
+    {
+        using var a = MultiInstanceTelemetry.CreateAzureMonitorInstance("Same", FakeConnectionString(1), SharedSource);
+        using var b = MultiInstanceTelemetry.CreateAzureMonitorInstance("Same", FakeConnectionString(2), SharedSource);
+        using var source = new ActivitySource(SharedSource);
+
+        using (a.BeginScope())
+        {
+            source.StartActivity("a1")?.Dispose();
+        }
+
+        using (b.BeginScope())
+        {
+            source.StartActivity("b1")?.Dispose();
+        }
+
+        Assert.Equal(1, a.ExportedSpanCount);
+        Assert.Equal(1, b.ExportedSpanCount);
+    }
+
     [Fact]
     public void CreateAzureMonitorInstance_ExposesIsolatedHandles()
     {
@@ -129,8 +160,8 @@ public class MultiInstanceTelemetryTests
             .AddProcessor(new GatingActivityExportProcessor(id, new InMemoryExporter<Activity>(sink)))
             .Build();
 
-    // Syntactically valid connection string pointing at an unused local endpoint — no network is
-    // required because the assertions rely on the in-process gate, not on successful egress.
+    // Valid connection string pointing at an unused local endpoint; no network is required because
+    // the assertions rely on the in-process gate, not on successful egress.
     private static string FakeConnectionString(int n)
         => $"InstrumentationKey=0000000{n}-0000-0000-0000-00000000000{n};IngestionEndpoint=https://localhost/";
 }

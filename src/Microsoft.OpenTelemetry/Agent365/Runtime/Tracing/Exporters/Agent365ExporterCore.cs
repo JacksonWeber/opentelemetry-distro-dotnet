@@ -5,6 +5,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -181,6 +182,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var endpointPath = BuildEndpointPath(tenantId, agentId, options.UseS2SEndpoint);
                 var requestUri = BuildRequestUri(endpoint, endpointPath);
 
+                // Host used for the a365 Network SDKStats 'host' dimension (stamp is extracted
+                // by the recorder). Resolved once per identity group; null when the URI is
+                // malformed, in which case the recorder falls back to "unknown".
+                string? requestHost = Uri.TryCreate(requestUri, UriKind.Absolute, out var parsedUri) ? parsedUri.Host : null;
+
                 string? token = null;
                 try
                 {
@@ -234,7 +240,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                     try
                     {
+                        var networkStats = DistroNetworkSdkStats.Instance;
+                        var stopwatch = networkStats != null ? Stopwatch.StartNew() : null;
+
                         using var resp = await sendAsync(request).ConfigureAwait(false);
+
+                        if (networkStats != null)
+                        {
+                            networkStats.TrackResponse(requestHost, (int)resp.StatusCode, stopwatch!.Elapsed.TotalMilliseconds);
+                        }
+
                         var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
                         this._logger?.LogDebug("Agent365ExporterCore: HTTP {StatusCode} exporting spans. '{HeaderKey}': '{CorrelationId}'.", (int)resp.StatusCode, CorrelationIdHeaderKey, correlationId);
                         if (!resp.IsSuccessStatusCode)
@@ -247,11 +262,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     }
                     catch (HttpRequestException ex)
                     {
+                        DistroNetworkSdkStats.Instance?.TrackException(requestHost, ex.GetType().FullName);
                         this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
                         return ExportResult.Failure;
                     }
                     catch (TaskCanceledException ex)
                     {
+                        DistroNetworkSdkStats.Instance?.TrackException(requestHost, ex.GetType().FullName);
                         this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
                         return ExportResult.Failure;
                     }

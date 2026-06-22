@@ -400,6 +400,16 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
                 // above) already brought up SDK Stats; nothing left for this callback to do
                 // on the pin side.
                 DistroFeatureSdkStats.Initialize(snapshot);
+
+                // Network SDKStats: the Azure Monitor exporter only records Network stats for
+                // its own Breeze transmitter. When the Agent365 exporter is active, the distro
+                // owns the a365 Network signal and records it itself (see Agent365ExporterCore).
+                // Other languages don't yet support Network SDKStats for OTLP, so this is scoped
+                // to Agent365 only.
+                if (effectiveExporters.HasFlag(ExportTarget.Agent365))
+                {
+                    DistroNetworkSdkStats.Initialize(snapshot.CustomerInstrumentationKey, snapshot.DistroVersion);
+                }
             }
             catch (Exception ex)
             {

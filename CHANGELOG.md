@@ -1,11 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.0.6 - 2026-07-01
 
 - Make the `invoke_agent` span compliant with OpenTelemetry GenAI semantic conventions v1.42: add request/response GenAI attributes (`gen_ai.request.*`, `gen_ai.data_source.id`, `gen_ai.output.type`, `gen_ai.system_instructions`, `gen_ai.response.finish_reasons`, `gen_ai.usage.*`) via reusable `GenAiRequestParameters`/`GenAiResponseParameters`, and emit `gen_ai.provider.name` on spans that carry agent details (e.g. `invoke_agent`, inference). Token usage is now emitted as integers and `gen_ai.response.finish_reasons` as a string array across all spans ([#120](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/120))
 - Throttle distro Feature SDK Stats to a 24-hour emission cadence. The exporter now collects Feature SDK Stats on the shared 15-minute Network SDK Stats reader, so the observable gauge applies an emission-ticks throttle (mirroring the Attach gauge) to avoid emitting every 15 minutes.
 - Emit Network SDK Stats for the Agent365 (`a365`) exporter. When the Agent365 exporter is active, the distro records `Request_Success_Count`, `Request_Failure_Count`, `Request_Duration`, `Retry_Count`, `Throttle_Count`, and `Exception_Count` (with `endpoint=a365`) for its export requests via a distro-owned meter that the Azure Monitor exporter's Statsbeat `MeterProvider` subscribes to — mirroring the long-interval Feature SDK Stats path so Network stats ship even when the Azure Monitor exporter is not selected. Honors `APPLICATIONINSIGHTS_STATSBEAT_DISABLED=true`.
 - Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.8.2
+- Add an actionable error message when the Agent365 exporter receives an HTTP 403 `insufficient_scope` response: the exporter now logs the identity (appid/oid) extracted from the JWT and links to troubleshooting (https://aka.ms/a365-403) and permission-granting (https://aka.ms/foundry-grant-agent-365-permissions) docs ([#126](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/126))
+- Record an OpenTelemetry-compliant span `Status` (and `error.type`) on the ETW DTO logging path (Path B), bringing it to parity with the Activity-based path. Adds `SpanStatusCode`/`SpanStatus`/`SpanStatusBuilder`, threads an optional `Exception` through the `*DataBuilder` chain, and emits a `Status { code, message }` object (defaulting to `Unset`) from `ExportFormatter.FormatLogData` ([#127](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/127))
 
 ## 1.0.5 - 2026-06-12
 

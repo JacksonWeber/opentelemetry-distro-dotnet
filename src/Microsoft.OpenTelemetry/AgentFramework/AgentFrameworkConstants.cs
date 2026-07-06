@@ -23,4 +23,12 @@ internal static class AgentFrameworkConstants
     /// Activity source for chat client operations.
     /// </summary>
     internal const string ChatClientSource = "Experimental.Microsoft.Agents.AI.ChatClient";
+
+    /// <summary>
+    /// Default activity source/meter name emitted by <c>Microsoft.Extensions.AI</c> when
+    /// <c>.UseOpenTelemetry()</c> is called on an <c>IChatClient</c>
+    /// without a custom <c>sourceName</c>. Agent Framework delegates LLM calls to the underlying
+    /// chat client, so the <c>chat</c> (inference) span is emitted on this source.
+    /// </summary>
+    internal const string MicrosoftExtensionsAISource = "Experimental.Microsoft.Extensions.AI";
 }

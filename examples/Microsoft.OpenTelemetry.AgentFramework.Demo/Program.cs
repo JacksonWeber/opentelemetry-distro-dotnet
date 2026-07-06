@@ -35,14 +35,20 @@ var apiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY")
 static string GetWeather([Description("The location to get the weather for.")] string location)
     => $"The weather in {location} is cloudy with a high of 15°C.";
 
+// Instrument the underlying chat client with the standard Microsoft.Extensions.AI
+// `.UseOpenTelemetry()` (emits the `chat` inference span), then instrument the agent layer
+// (emits `invoke_agent` + `execute_tool`). The distro's UseAgentFramework() collects all three.
 AIAgent agent = new AzureOpenAIClient(new Uri(endpoint), new ApiKeyCredential(apiKey))
     .GetChatClient(deploymentName)
     .AsIChatClient()
+    .AsBuilder()
+    .UseOpenTelemetry(configure: cfg => cfg.EnableSensitiveData = true)
+    .Build()
     .AsAIAgent(
         instructions: "You are a helpful assistant that provides concise responses.",
         tools: [AIFunctionFactory.Create(GetWeather)])
     .AsBuilder()
-    .UseOpenTelemetry()
+    .UseOpenTelemetry(configure: cfg => cfg.EnableSensitiveData = true)
     .Build();
 
 // --- Endpoints ---------------------------------------------------------------

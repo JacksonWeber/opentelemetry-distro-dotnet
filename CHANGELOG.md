@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Filter extra attributes dynamically instead of against a static reserved-key list: `BaseDataBuilder.AddExtraAttributes` now skips any key already set by the builder on the span (`!attributes.ContainsKey(key)`), removing the hard-coded `ReservedAttributeKeys` set so newly added builder attributes are protected automatically ([#107](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/107))
+
 ## 1.0.6 - 2026-07-01
 
 - Make the `invoke_agent` span compliant with OpenTelemetry GenAI semantic conventions v1.42: add request/response GenAI attributes (`gen_ai.request.*`, `gen_ai.data_source.id`, `gen_ai.output.type`, `gen_ai.system_instructions`, `gen_ai.response.finish_reasons`, `gen_ai.usage.*`) via reusable `GenAiRequestParameters`/`GenAiResponseParameters`, and emit `gen_ai.provider.name` on spans that carry agent details (e.g. `invoke_agent`, inference). Token usage is now emitted as integers and `gen_ai.response.finish_reasons` as a string array across all spans ([#120](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/120))

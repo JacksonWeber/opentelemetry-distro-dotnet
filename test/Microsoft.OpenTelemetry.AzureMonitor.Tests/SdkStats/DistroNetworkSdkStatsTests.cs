@@ -28,7 +28,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             var success = Assert.Single(measurements, m => m.instrument == "Request_Success_Count");
             Assert.Equal(1, success.value);
             Assert.Equal("a365", success.tags["endpoint"]);
-            Assert.Equal("9.9.9-test", success.tags["version"]);
+            Assert.Equal("mot9.9.9-test", success.tags["version"]);
             Assert.Equal("N/A", success.tags["cikey"]);
             Assert.Equal("dotnet", success.tags["language"]);
             Assert.Equal("westus2-1", success.tags["host"]);
@@ -111,7 +111,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             var success = Assert.Single(measurements, m => m.instrument == "Request_Success_Count");
             Assert.Equal("ikey-xyz", success.tags["cikey"]);
-            Assert.Equal("2.0.0", success.tags["version"]);
+            Assert.Equal("mot2.0.0", success.tags["version"]);
         }
 
         private static List<(string instrument, long value, Dictionary<string, object?> tags)> Collect(System.Action record)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prefix the distro-owned SDK Stats `version` dimension with the `mot` component label (e.g. `mot1.0.6`) so Feature and Network SDK Stats report the highest-level emitting component per the SDK Version spec, matching the Azure Monitor exporter's format.
+
 ## 1.0.7 - 2026-07-13
 
 - Subscribe to the `Experimental.Microsoft.Extensions.AI` source (and meter) in `UseAgentFramework()` so the inference (`chat`) span emitted by the underlying `IChatClient` is captured alongside `invoke_agent` and `execute_tool`, giving full Agent 365 span coverage ([#115](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/115))

@@ -13,11 +13,29 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Internals
     internal static class SdkVersion
     {
         /// <summary>
+        /// SDK Version component label for the Microsoft OpenTelemetry distro, per the
+        /// <see href="https://github.com/microsoft/Telemetry-Collection-Spec">SDK Version spec</see>
+        /// (<c>mot</c> = Microsoft OpenTelemetry distro). This is the highest-level component that
+        /// initializes the exporter and emits distro-owned SDKStats.
+        /// </summary>
+        internal const string ComponentLabel = "mot";
+
+        /// <summary>
         /// The distro version string (e.g. "1.0.0-beta.2"), lazily resolved from
         /// <see cref="AssemblyInformationalVersionAttribute"/> with the SourceLink
         /// commit hash suffix stripped.
         /// </summary>
         internal static readonly string Value = ResolveVersion();
+
+        /// <summary>
+        /// Formats the SDKStats <c>version</c> dimension by prefixing the distro package
+        /// version with the <see cref="ComponentLabel"/> (e.g. "mot1.0.0-beta.2"). Per the
+        /// SDKStats spec, this reports the version of the highest-level component that emitted
+        /// the metric — the Microsoft OpenTelemetry distro — and matches the format the Azure
+        /// Monitor exporter produces for the SDKStats it emits on the distro's behalf.
+        /// </summary>
+        /// <param name="distroVersion">The distro package version to label.</param>
+        internal static string GetSdkStatsVersion(string distroVersion) => ComponentLabel + distroVersion;
 
         private static string ResolveVersion()
         {

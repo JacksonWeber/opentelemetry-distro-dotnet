@@ -278,7 +278,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 { "runtimeVersion", s_runtimeVersion },
                 { "os", ResourceProviderHelper.GetOperatingSystem() },
                 { "language", Language },
-                { "version", Volatile.Read(ref _distroVersion) },
+                { "version", SdkVersion.GetSdkStatsVersion(Volatile.Read(ref _distroVersion)) },
                 { "endpoint", EndpointA365 },
                 { "host", DistroNetworkSdkStatsHelper.ExtractStampHost(requestHost) },
             };

@@ -191,7 +191,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                     new KeyValuePair<string, object?>("type", 0),
                     new KeyValuePair<string, object?>("os", ResourceProviderHelper.GetOperatingSystem()),
                     new KeyValuePair<string, object?>("language", "dotnet"),
-                    new KeyValuePair<string, object?>("version", snapshot.DistroVersion));
+                    new KeyValuePair<string, object?>("version", SdkVersion.GetSdkStatsVersion(snapshot.DistroVersion)));
 
                 return new[] { measurement };
             }

@@ -39,7 +39,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             var measurements = CollectObservableMeasurements();
 
-            var match = Assert.Single(measurements, m => m.tags.TryGetValue("version", out var v) && (string?)v == "9.9.9-test");
+            var match = Assert.Single(measurements, m => m.tags.TryGetValue("version", out var v) && (string?)v == "mot9.9.9-test");
 
             // The numeric value equals the feature mask.
             Assert.Equal((long)snapshot.Features, match.value);
@@ -98,7 +98,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             DistroFeatureSdkStats.Initialize(snapshot);
             var measurements = CollectObservableMeasurements();
 
-            var match = Assert.Single(measurements, m => m.tags.TryGetValue("version", out var v) && (string?)v == "9.9.9-otlp-only");
+            var match = Assert.Single(measurements, m => m.tags.TryGetValue("version", out var v) && (string?)v == "mot9.9.9-otlp-only");
             Assert.Equal("N/A", match.tags["cikey"]);
             Assert.Equal((long)snapshot.Features, match.value);
         }

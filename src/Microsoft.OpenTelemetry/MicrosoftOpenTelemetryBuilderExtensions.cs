@@ -366,11 +366,11 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         {
             try
             {
-                // Mirror the exporter's opt-in semantics: APPLICATIONINSIGHTS_SDKSTATS_DISABLED
-                // must be set to "false" to enable customer SDK stats.
+                // Mirror the exporter's on-by-default semantics: customer SDK stats are
+                // enabled unless APPLICATIONINSIGHTS_SDKSTATS_DISABLED is set to "true".
                 var customerSdkStatsDisabled = Environment.GetEnvironmentVariable(
                     EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
-                var customerSdkStatsEnabled = string.Equals(customerSdkStatsDisabled, "false", StringComparison.OrdinalIgnoreCase);
+                var customerSdkStatsEnabled = !string.Equals(customerSdkStatsDisabled, "true", StringComparison.OrdinalIgnoreCase);
 
                 // Resolve the effective connection string the exporter will use at transmit
                 // time without writing it back into the caller-supplied options instance.

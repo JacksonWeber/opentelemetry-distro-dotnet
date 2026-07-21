@@ -19,8 +19,9 @@ internal static class EnvironmentVariableConstants
     internal const string APPLICATIONINSIGHTS_STATSBEAT_DISABLED = "APPLICATIONINSIGHTS_STATSBEAT_DISABLED";
 
     /// <summary>
-    /// Customer-facing SDK stats opt-in. When set to <c>"false"</c> (case-insensitive),
-    /// the Azure Monitor exporter enables Customer SDK Stats and the distro reports the
+    /// Customer-facing SDK stats opt-out. Customer SDK Stats are on by default; when this is
+    /// set to <c>"true"</c> (case-insensitive), the Azure Monitor exporter disables Customer
+    /// SDK Stats and the distro clears the
     /// <see cref="SdkStats.DistroFeature.CustomerSdkStats"/> feature bit.
     /// </summary>
     internal const string APPLICATIONINSIGHTS_SDKSTATS_DISABLED = "APPLICATIONINSIGHTS_SDKSTATS_DISABLED";

@@ -333,6 +333,16 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         return builder;
     }
 
+    // Mirror the exporter's on-by-default semantics: customer SDK stats are enabled
+    // unless APPLICATIONINSIGHTS_SDKSTATS_DISABLED is set to "true". Extracted so the
+    // opt-out parsing is unit-testable and protected against accidental inversion.
+    internal static bool IsCustomerSdkStatsEnabled()
+    {
+        var disabled = Environment.GetEnvironmentVariable(
+            EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
+        return !string.Equals(disabled, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void RegisterDistroFeatureSdkStats(
         IServiceCollection services,
         MicrosoftOpenTelemetryOptions options,
@@ -366,11 +376,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         {
             try
             {
-                // Mirror the exporter's on-by-default semantics: customer SDK stats are
-                // enabled unless APPLICATIONINSIGHTS_SDKSTATS_DISABLED is set to "true".
-                var customerSdkStatsDisabled = Environment.GetEnvironmentVariable(
-                    EnvironmentVariableConstants.APPLICATIONINSIGHTS_SDKSTATS_DISABLED);
-                var customerSdkStatsEnabled = !string.Equals(customerSdkStatsDisabled, "true", StringComparison.OrdinalIgnoreCase);
+                var customerSdkStatsEnabled = IsCustomerSdkStatsEnabled();
 
                 // Resolve the effective connection string the exporter will use at transmit
                 // time without writing it back into the caller-supplied options instance.

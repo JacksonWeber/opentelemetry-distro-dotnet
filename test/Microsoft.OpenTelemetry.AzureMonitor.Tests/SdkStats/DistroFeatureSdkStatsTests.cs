@@ -317,6 +317,58 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         }
 
         [Fact]
+        public void Observe_AgentFrameworkInstrumentationAlsoEmitsCorrelatedFeature()
+        {
+            var snapshot = DistroFeatureSnapshot.CreateForTesting(
+                DistroFeature.Distro,
+                customerInstrumentationKey: "N/A",
+                distroVersion: "9.9.9-agent-framework");
+            DistroFeatureSdkStats.Initialize(snapshot);
+
+            // Simulate collection between the processor's correlated instrumentation and
+            // feature updates. The payload must still keep the two SDKStats types consistent.
+            DistroSdkStatsUsage.MarkInstrumentationInUse(DistroInstrumentation.AgentFramework);
+
+            var measurements = CollectObservableMeasurements();
+            var feature = Assert.Single(
+                measurements,
+                measurement => (int)measurement.tags["type"]! == 0);
+            var instrumentation = Assert.Single(
+                measurements,
+                measurement => (int)measurement.tags["type"]! == 1);
+
+            Assert.Equal(1, feature.value);
+            Assert.True(
+                ((DistroFeature)(long)feature.tags["feature"]!)
+                    .HasFlag(DistroFeature.AgentFramework));
+            Assert.Equal(1, instrumentation.value);
+            Assert.True(
+                ((DistroInstrumentation)(long)instrumentation.tags["feature"]!)
+                    .HasFlag(DistroInstrumentation.AgentFramework));
+        }
+
+        [Fact]
+        public void Observe_AgentFrameworkFeatureWithoutCollectedInstrumentationIsNotEmitted()
+        {
+            var snapshot = DistroFeatureSnapshot.CreateForTesting(
+                DistroFeature.Distro,
+                customerInstrumentationKey: "N/A",
+                distroVersion: "9.9.9-agent-framework");
+            DistroFeatureSdkStats.Initialize(snapshot);
+
+            // Simulate the reverse collection interleaving: old instrumentation was read
+            // before the correlated feature write became visible.
+            DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
+
+            var measurement = Assert.Single(CollectObservableMeasurements());
+            Assert.Equal(1, measurement.value);
+            Assert.Equal((long)DistroFeature.Distro, measurement.tags["feature"]);
+            Assert.False(
+                ((DistroFeature)(long)measurement.tags["feature"]!)
+                    .HasFlag(DistroFeature.AgentFramework));
+        }
+
+        [Fact]
         public void UsageRegistry_UpdatesConcurrentlyAndNeverClearsObservedBits()
         {
             Parallel.Invoke(
@@ -394,16 +446,16 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         public void Initialize_StrictSubsetClearsOldConfigurationBitsButKeepsRuntimeFeatures()
         {
             var initialSnapshot = DistroFeatureSnapshot.CreateForTesting(
-                DistroFeature.Distro | DistroFeature.LiveMetrics,
+                DistroFeature.Distro | DistroFeature.StandardMetrics,
                 customerInstrumentationKey: "N/A",
                 distroVersion: "1.0.0");
             DistroFeatureSdkStats.Initialize(initialSnapshot);
-            DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
+            DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.LiveMetrics);
 
             var initial = Assert.Single(CollectObservableMeasurements());
             Assert.Equal(1, initial.value);
             Assert.Equal(
-                (long)(DistroFeature.Distro | DistroFeature.LiveMetrics | DistroFeature.AgentFramework),
+                (long)(DistroFeature.Distro | DistroFeature.StandardMetrics | DistroFeature.LiveMetrics),
                 initial.tags["feature"]);
 
             var strictSubsetSnapshot = DistroFeatureSnapshot.CreateForTesting(
@@ -418,12 +470,13 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             var updated = Assert.Single(CollectObservableMeasurements());
             Assert.Equal(1, updated.value);
             Assert.Equal(
-                (long)(DistroFeature.Distro | DistroFeature.AgentFramework),
+                (long)(DistroFeature.Distro | DistroFeature.LiveMetrics),
                 updated.tags["feature"]);
             Assert.False(
-                ((DistroFeature)(long)updated.tags["feature"]!).HasFlag(DistroFeature.LiveMetrics));
+                ((DistroFeature)(long)updated.tags["feature"]!)
+                    .HasFlag(DistroFeature.StandardMetrics));
             Assert.True(
-                DistroSdkStatsUsage.Features.HasFlag(DistroFeature.AgentFramework));
+                DistroSdkStatsUsage.Features.HasFlag(DistroFeature.LiveMetrics));
         }
 
         [Fact]

@@ -167,8 +167,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
 
             var snapshot = Volatile.Read(ref _snapshot);
-            var features = snapshot.Features | DistroSdkStatsUsage.Features;
             var instrumentations = DistroSdkStatsUsage.Instrumentations;
+            var features = GetFeatures(snapshot, instrumentations);
             if (features == DistroFeature.None
                 && instrumentations == DistroInstrumentation.None)
             {
@@ -205,8 +205,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
 
             snapshot = Volatile.Read(ref _snapshot);
-            features = snapshot.Features | DistroSdkStatsUsage.Features;
             instrumentations = DistroSdkStatsUsage.Instrumentations;
+            features = GetFeatures(snapshot, instrumentations);
 
             // A single callback claims the shared slot so concurrent readers cannot double-emit.
             if (!TryClaimCollection(previousTicks, nowTicks))
@@ -253,6 +253,21 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 Interlocked.CompareExchange(ref _lastCollectionTicks, previousTicks, nowTicks);
                 return EmptyMeasurements;
             }
+        }
+
+        private static DistroFeature GetFeatures(
+            DistroFeatureSnapshot snapshot,
+            DistroInstrumentation instrumentations)
+        {
+            var features =
+                (snapshot.Features | DistroSdkStatsUsage.Features)
+                & ~DistroFeature.AgentFramework;
+            if ((instrumentations & DistroInstrumentation.AgentFramework) != 0)
+            {
+                features |= DistroFeature.AgentFramework;
+            }
+            return features;
+        }
         }
 
         private bool TryGetEligibleCollectionWindow(out long previousTicks, out long nowTicks)

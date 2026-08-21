@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Threading;
 using Microsoft.OpenTelemetry.AzureMonitor.Internals;
@@ -12,6 +11,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 {
     /// <summary>
     /// Marks enabled instrumentations when their meters record an actual measurement.
+    /// This covers metric-only configurations where no activity reaches the span processor.
     /// </summary>
     internal sealed class DistroInstrumentationUsageMeterListener : IDisposable
     {
@@ -87,13 +87,14 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 {
                     if (!_disposed)
                     {
-                        // Rearm only after collection completes so slow customer callbacks
-                        // cannot queue overlapping observable collection work.
+                        // Single-shot rearming prevents slow customer observable callbacks
+                        // from queuing overlapping timer work items.
                         _observableCollectionTimer.Change(
                             ObservableCollectionInterval,
                             Timeout.InfiniteTimeSpan);
                     }
                 }
+
             }
         }
 
@@ -105,24 +106,13 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 
         internal static void RegisterInternalHttpHost(string? host)
         {
-            var normalizedHost = NormalizeHost(host);
-            if (normalizedHost is not null)
+            if (!string.IsNullOrWhiteSpace(host))
             {
-                InternalHttpHosts.TryAdd(normalizedHost, 0);
+                InternalHttpHosts.TryAdd(host!.Trim().TrimEnd('.'), 0);
             }
         }
 
         internal static void ResetInternalHttpHostsForTesting() => InternalHttpHosts.Clear();
-
-        private static string? NormalizeHost(string? host)
-        {
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                return null;
-            }
-
-            return host!.Trim().TrimEnd('.');
-        }
 
         private void EnableKnownInstrumentation(Instrument instrument, MeterListener listener)
         {
@@ -151,18 +141,23 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 }
 
                 DistroSdkStatsUsage.MarkInstrumentationInUse(instrumentation);
+
+                if ((instrumentation & DistroInstrumentation.AgentFramework) != 0)
+                {
+                    DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
+                }
             }
         }
 
         private static bool IsAzureMonitorInternalHttpRequest(
             ReadOnlySpan<KeyValuePair<string, object?>> tags)
         {
+            string? serverAddress = null;
             if (HttpMetricSuppressionDepth.Value > 0)
             {
                 return true;
             }
 
-            string? serverAddress = null;
             foreach (var tag in tags)
             {
                 if (string.Equals(tag.Key, "server.address", StringComparison.Ordinal))
@@ -172,19 +167,19 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 }
             }
 
-            var address = NormalizeHost(serverAddress);
-            if (address is null)
+            if (string.IsNullOrEmpty(serverAddress))
             {
                 return false;
             }
 
+            var address = serverAddress!;
             return string.Equals(address, "169.254.169.254", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(address, "dc.services.visualstudio.com", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(address, "rt.services.visualstudio.com", StringComparison.OrdinalIgnoreCase)
                 || address.EndsWith(".stats.monitor.azure.com", StringComparison.OrdinalIgnoreCase)
                 || address.EndsWith(".in.applicationinsights.azure.com", StringComparison.OrdinalIgnoreCase)
                 || address.EndsWith(".livediagnostics.monitor.azure.com", StringComparison.OrdinalIgnoreCase)
-                || InternalHttpHosts.ContainsKey(address);
+                || InternalHttpHosts.ContainsKey(address.TrimEnd('.'));
         }
 
         private sealed class HttpMetricSuppressionScope : IDisposable

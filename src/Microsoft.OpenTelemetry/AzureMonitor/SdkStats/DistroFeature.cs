@@ -33,7 +33,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         /// <summary>Microsoft Entra ID (AAD) authentication is configured.</summary>
         AadHandling = 1UL << 1,
 
-        /// <summary>Live Metrics is enabled.</summary>
+        /// <summary>Live Metrics entered active collection after a portal subscription.</summary>
         LiveMetrics = 1UL << 2,
 
         /// <summary>Standard metrics emission is enabled.</summary>
@@ -64,9 +64,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         ExporterConsole = 1UL << 11,
 
         /// <summary>
-        /// Microsoft Agent Framework wiring is active. Currently always set because the distro
-        /// wires <c>UseAgentFramework</c> unconditionally. Becomes dynamic when an opt-out is
-        /// introduced.
+        /// Microsoft Agent Framework telemetry was observed in this process.
         /// </summary>
         AgentFramework = 1UL << 12,
 

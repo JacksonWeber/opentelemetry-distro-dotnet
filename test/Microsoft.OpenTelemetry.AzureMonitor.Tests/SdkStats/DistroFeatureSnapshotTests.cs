@@ -31,11 +31,17 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.NotNull(snapshot);
             Assert.Equal("N/A", snapshot!.CustomerInstrumentationKey);
             Assert.Equal(DistroFeatureSnapshot.NoCustomerInstrumentationKey, snapshot.CustomerInstrumentationKey);
-            // Always-on bits still set even without a customer connection string.
+            // Startup identity, the constructed exporter, and established option facts are
+            // reported without an Azure Monitor resource.
             Assert.True(snapshot.Features.HasFlag(DistroFeature.Distro));
-            Assert.True(snapshot.Features.HasFlag(DistroFeature.AgentFramework));
             Assert.True(snapshot.Features.HasFlag(DistroFeature.ExporterOtlp));
             Assert.False(snapshot.Features.HasFlag(DistroFeature.ExporterAzureMonitor));
+            Assert.False(snapshot.Features.HasFlag(DistroFeature.LiveMetrics));
+            Assert.True(snapshot.Features.HasFlag(DistroFeature.StandardMetrics));
+            Assert.True(snapshot.Features.HasFlag(DistroFeature.PerfCounters));
+            Assert.True(snapshot.Features.HasFlag(DistroFeature.DiskRetry));
+            Assert.True(snapshot.Features.HasFlag(DistroFeature.TraceBasedLogsSampler));
+            Assert.False(snapshot.Features.HasFlag(DistroFeature.AgentFramework));
         }
 
         [Fact]
@@ -59,8 +65,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                 distroVersion: "1.0.0");
 
             Assert.NotNull(snapshot);
-            // DISTRO and AGENT_FRAMEWORK are always set; nothing else when everything is off.
-            var expected = DistroFeature.Distro | DistroFeature.AgentFramework;
+            // Distro identity is the only startup fact after all optional facts are disabled.
+            var expected = DistroFeature.Distro;
             Assert.Equal(expected, snapshot!.Features);
             Assert.Equal("00000000-0000-0000-0000-000000000000", snapshot.CustomerInstrumentationKey);
             Assert.Equal("1.0.0", snapshot.DistroVersion);
@@ -86,15 +92,15 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             var expected =
                 DistroFeature.Distro
-                | DistroFeature.LiveMetrics
                 | DistroFeature.StandardMetrics
                 | DistroFeature.PerfCounters
                 | DistroFeature.DiskRetry
                 | DistroFeature.TraceBasedLogsSampler
-                | DistroFeature.ExporterAzureMonitor
-                | DistroFeature.AgentFramework;
+                | DistroFeature.ExporterAzureMonitor;
 
             Assert.Equal(expected, snapshot!.Features);
+            Assert.False(snapshot.Features.HasFlag(DistroFeature.LiveMetrics));
+            Assert.False(snapshot.Features.HasFlag(DistroFeature.AgentFramework));
         }
 
         [Fact]

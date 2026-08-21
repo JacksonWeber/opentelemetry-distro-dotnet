@@ -7,6 +7,8 @@ using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 using Xunit;
 
@@ -61,7 +63,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             // DistroFeature.None, the observable gauge MUST return zero measurements (not a
             // default Measurement<long>(), which would still publish a phantom zero data point
             // with no tags). Use the internal test factory to construct a None-masked snapshot
-            // directly — DistroFeatureSnapshot.Build always sets at least Distro|AgentFramework
+            // directly — DistroFeatureSnapshot.Build always sets at least Distro
             // so it cannot produce a None snapshot through the normal code path.
             var snapshot = DistroFeatureSnapshot.CreateForTesting(
                 DistroFeature.None,
@@ -103,6 +105,194 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal(1, measurement.value);
             Assert.Equal((long)DistroInstrumentation.HttpClient, measurement.tags["feature"]);
             Assert.Equal(1, measurement.tags["type"]);
+        }
+
+        [Fact]
+        public void Observe_LiveMetricsPostUpdatesInMemoryAndWaitsForScheduledCollection()
+        {
+            var options = new MicrosoftOpenTelemetryOptions();
+            options.AzureMonitor.EnableLiveMetrics = true;
+            var configuredSnapshot = DistroFeatureSnapshot.Build(
+                options,
+                ValidConnectionString,
+                ExportTarget.AzureMonitor,
+                customerSdkStatsEnabled: false,
+                a365OnlyMode: false,
+                distroVersion: "9.9.9-live");
+
+            Assert.False(configuredSnapshot!.Features.HasFlag(DistroFeature.LiveMetrics));
+
+            var emptySnapshot = DistroFeatureSnapshot.CreateForTesting(
+                DistroFeature.None,
+                customerInstrumentationKey: "N/A",
+                distroVersion: "9.9.9-live");
+            DistroFeatureSdkStats.Initialize(emptySnapshot);
+
+            LiveMetricsUsageTrackingTransport.TrackRequest(
+                Azure.Core.RequestMethod.Post,
+                new Uri("https://example.test/QuickPulseService.svc/ping"));
+            Assert.Equal(DistroFeature.None, DistroSdkStatsUsage.Features);
+            Assert.Empty(CollectObservableMeasurements());
+
+            LiveMetricsUsageTrackingTransport.TrackRequest(
+                Azure.Core.RequestMethod.Post,
+                new Uri("https://example.test/QuickPulseService.svc/post"));
+            Assert.Equal(DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
+            Assert.Empty(CollectObservableMeasurements());
+
+            MakeNextCollectionEligible();
+            var measurement = Assert.Single(CollectObservableMeasurements());
+            Assert.Equal((long)DistroFeature.LiveMetrics, measurement.value);
+            Assert.Equal(0, measurement.tags["type"]);
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_WiresLiveMetricsUsageTrackingTransport()
+        {
+            var options = new AzureMonitorOptions();
+            var exporterOptions =
+                new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions();
+
+            options.SetValueToExporterOptions(exporterOptions);
+
+            Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_DoesNotDoubleWrapTrackingTransport()
+        {
+            var options = new AzureMonitorOptions();
+            var trackingTransport = new LiveMetricsUsageTrackingTransport(
+                Azure.Core.Pipeline.HttpClientTransport.Shared);
+            var exporterOptions =
+                new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
+                {
+                    Transport = trackingTransport,
+                };
+
+            options.SetValueToExporterOptions(exporterOptions);
+
+            Assert.Same(trackingTransport, exporterOptions.Transport);
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_PreservesPreconfiguredExporterTransport()
+        {
+            var options = new AzureMonitorOptions();
+            using var configuredTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            var exporterOptions =
+                new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
+                {
+                    Transport = configuredTransport,
+                };
+
+            options.SetValueToExporterOptions(exporterOptions);
+
+            var trackingTransport =
+                Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+            Assert.Same(configuredTransport, trackingTransport.InnerTransport);
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_ExplicitTransportOverridesPreconfiguredExporterTransport()
+        {
+            using var optionsTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            using var exporterTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            var options = new AzureMonitorOptions
+            {
+                Transport = optionsTransport,
+            };
+            var exporterOptions =
+                new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
+                {
+                    Transport = exporterTransport,
+                };
+
+            options.SetValueToExporterOptions(exporterOptions);
+
+            var trackingTransport =
+                Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+            Assert.Same(optionsTransport, trackingTransport.InnerTransport);
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_PreservesExporterTransportWhenGlobalDefaultChanges()
+        {
+            var originalDefault = Azure.Core.ClientOptions.Default.Transport;
+            var options = new AzureMonitorOptions();
+            using var newDefault = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+
+            try
+            {
+                Azure.Core.ClientOptions.Default.Transport = newDefault;
+                var exporterOptions =
+                    new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions();
+
+                options.SetValueToExporterOptions(exporterOptions);
+
+                var trackingTransport =
+                    Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+                Assert.Same(newDefault, trackingTransport.InnerTransport);
+            }
+            finally
+            {
+                Azure.Core.ClientOptions.Default.Transport = originalDefault;
+            }
+        }
+
+        [Fact]
+        public void AzureMonitorOptions_TracksExplicitAssignmentOfInheritedTransport()
+        {
+            var originalDefault = Azure.Core.ClientOptions.Default.Transport;
+            var options = new AzureMonitorOptions();
+            var explicitlyAssignedTransport = options.Transport;
+            options.Transport = explicitlyAssignedTransport;
+            using var newDefault = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+
+            try
+            {
+                Azure.Core.ClientOptions.Default.Transport = newDefault;
+                var exporterOptions =
+                    new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions();
+
+                options.SetValueToExporterOptions(exporterOptions);
+
+                var trackingTransport =
+                    Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+                Assert.Same(explicitlyAssignedTransport, trackingTransport.InnerTransport);
+            }
+            finally
+            {
+                Azure.Core.ClientOptions.Default.Transport = originalDefault;
+            }
+        }
+
+        [Fact]
+        public void UseMicrosoftOpenTelemetry_PropagatesExplicitAzureMonitorTransport()
+        {
+            using var configuredTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            var services = new ServiceCollection();
+            services.AddOpenTelemetry().UseMicrosoftOpenTelemetry(options =>
+            {
+                options.Exporters = ExportTarget.AzureMonitor;
+                options.AzureMonitor.ConnectionString = ValidConnectionString;
+                options.AzureMonitor.Transport = configuredTransport;
+            });
+
+            using var serviceProvider = services.BuildServiceProvider();
+            var exporterOptions = serviceProvider
+                .GetRequiredService<IOptionsMonitor<Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions>>()
+                .CurrentValue;
+
+            var trackingTransport =
+                Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+            Assert.Same(configuredTransport, trackingTransport.InnerTransport);
         }
 
         [Fact]

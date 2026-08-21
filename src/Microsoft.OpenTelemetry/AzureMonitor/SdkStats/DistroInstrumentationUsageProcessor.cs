@@ -8,7 +8,7 @@ using OpenTelemetry;
 namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 {
     /// <summary>
-    /// Marks an enabled instrumentation as used after its source produces a completed span.
+    /// Marks an instrumentation as used only after its registered source produces a completed span.
     /// </summary>
     internal sealed class DistroInstrumentationUsageProcessor : BaseProcessor<Activity>
     {
@@ -27,9 +27,16 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
 
             var used = GetInstrumentations(activity.Source.Name) & _enabledInstrumentations;
-            if (used != DistroInstrumentation.None)
+            if (used == DistroInstrumentation.None)
             {
-                DistroSdkStatsUsage.MarkInstrumentationInUse(used);
+                return;
+            }
+
+            DistroSdkStatsUsage.MarkInstrumentationInUse(used);
+
+            if ((used & DistroInstrumentation.AgentFramework) != 0)
+            {
+                DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
             }
         }
 

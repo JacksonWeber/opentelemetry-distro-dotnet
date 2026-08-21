@@ -186,6 +186,10 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
             o.EnableTraceBasedLogsSampler = options.AzureMonitor.EnableTraceBasedLogsSampler;
             o.SamplingRatio = options.AzureMonitor.SamplingRatio;
             o.TracesPerSecond = options.AzureMonitor.TracesPerSecond;
+            if (options.AzureMonitor.ExplicitTransport is { } transport)
+            {
+                o.Transport = transport;
+            }
         }, effectiveInstrumentation);
 
         // --- Agent365 (always: scopes + baggage + span processors; exporter gated by Exporters flag) ---

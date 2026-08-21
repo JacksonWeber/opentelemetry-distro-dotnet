@@ -30,7 +30,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
         /// <summary>
         /// Test-only factory that constructs a snapshot with an arbitrary feature bit mask.
         /// <see cref="Build"/> always sets at least
-        /// <see cref="DistroFeature.Distro"/> | <see cref="DistroFeature.AgentFramework"/>, so
+        /// <see cref="DistroFeature.Distro"/>, so
         /// tests that need to exercise the spec-mandated empty-features short-circuit (which
         /// <see cref="Build"/> can never produce) use this entry point.
         /// </summary>
@@ -93,15 +93,12 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 
             var features = DistroFeature.Distro;
 
-            // AzureMonitor-scoped feature flags.
+            // These options remain established construction/configuration facts. LiveMetrics
+            // is intentionally excluded here: enabling it starts silent pinging, while usage
+            // begins only after the service subscribes and the SDK enters active collection.
             if (options.AzureMonitor.Credential != null)
             {
                 features |= DistroFeature.AadHandling;
-            }
-
-            if (options.AzureMonitor.EnableLiveMetrics)
-            {
-                features |= DistroFeature.LiveMetrics;
             }
 
             if (options.AzureMonitor.EnableStandardMetrics)
@@ -149,9 +146,6 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             {
                 features |= DistroFeature.ExporterConsole;
             }
-
-            // Distro behavior flags.
-            features |= DistroFeature.AgentFramework; // UseAgentFramework is unconditional today.
 
             if (a365OnlyMode)
             {

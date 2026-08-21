@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Report Live Metrics usage in Feature SDK Stats only when active-collection requests are sent, and correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor. Runtime feature detection adds no locks or custom listeners; updates are emitted at the next scheduled long-interval export.
 - Isolate Agent365 exporter failures by tenant ([#158](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/158))
 - Support tracing A2A via execute tool span.
 - Add a self-contained Agent365 service-to-service sample that uses app-only MSAL authentication and emits manual Invoke Agent, Inference, and Execute Tool spans without the Agents Framework ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))

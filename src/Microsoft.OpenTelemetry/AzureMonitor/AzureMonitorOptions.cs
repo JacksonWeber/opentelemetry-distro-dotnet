@@ -2,9 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Runtime.Serialization;
+using System.Reflection;
 using Azure.Core;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Monitor.OpenTelemetry.LiveMetrics;
+using Azure.Core.Pipeline;
+using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 
 namespace Microsoft.OpenTelemetry
 {
@@ -13,6 +16,13 @@ namespace Microsoft.OpenTelemetry
     /// </summary>
     public class AzureMonitorOptions : ClientOptions
     {
+        private static readonly PropertyInfo? IsCustomTransportSetProperty =
+            typeof(ClientOptions).GetProperty(
+                "IsCustomTransportSet",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private readonly HttpPipelineTransport _inheritedTransport;
+
         /// <summary>
         /// The Connection String provides users with a single configuration setting to identify the Azure Monitor resource and endpoint.
         /// </summary>
@@ -92,11 +102,24 @@ namespace Microsoft.OpenTelemetry
         /// </summary>
         internal bool SkipExporter { get; set; }
 
+        internal HttpPipelineTransport? ExplicitTransport
+        {
+            get
+            {
+                bool setterWasCalled =
+                    IsCustomTransportSetProperty?.GetValue(this) is true;
+                return setterWasCalled || !ReferenceEquals(Transport, _inheritedTransport)
+                    ? Transport
+                    : null;
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AzureMonitorOptions"/>.
         /// </summary>
         public AzureMonitorOptions()
         {
+            _inheritedTransport = Transport;
             // users can explicitly change it, but by default we don't want internal logs to be reported to Azure Monitor.
             this.Diagnostics.IsDistributedTracingEnabled = false;
             this.Diagnostics.IsLoggingEnabled = false;
@@ -114,10 +137,14 @@ namespace Microsoft.OpenTelemetry
             exporterOptions.EnableStandardMetrics = EnableStandardMetrics;
             exporterOptions.EnablePerformanceCounters = EnablePerfCounters;
             exporterOptions.EnableTraceBasedLogsSampler = EnableTraceBasedLogsSampler;
-            if (Transport != null)
-            {
-                exporterOptions.Transport = Transport;
-            }
+            // The exporter copies its transport into the internal Live Metrics client. Wrapping
+            // here lets SDKStats distinguish silent pinging from active subscribed POSTs without
+            // relying on exporter internals or changing customer transport behavior.
+            var transport =
+                ExplicitTransport ?? exporterOptions.Transport ?? HttpClientTransport.Shared;
+            exporterOptions.Transport = transport is LiveMetricsUsageTrackingTransport
+                ? transport
+                : new LiveMetricsUsageTrackingTransport(transport);
             exporterOptions.Diagnostics.IsDistributedTracingEnabled = Diagnostics.IsDistributedTracingEnabled;
             exporterOptions.Diagnostics.IsLoggingEnabled = Diagnostics.IsLoggingEnabled;
         }

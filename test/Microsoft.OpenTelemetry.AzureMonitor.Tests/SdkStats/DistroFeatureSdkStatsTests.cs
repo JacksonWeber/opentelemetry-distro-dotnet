@@ -142,7 +142,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             MakeNextCollectionEligible();
             var measurement = Assert.Single(CollectObservableMeasurements());
-            Assert.Equal((long)DistroFeature.LiveMetrics, measurement.value);
+            Assert.Equal(1, measurement.value);
+            Assert.Equal((long)DistroFeature.LiveMetrics, measurement.tags["feature"]);
             Assert.Equal(0, measurement.tags["type"]);
         }
 

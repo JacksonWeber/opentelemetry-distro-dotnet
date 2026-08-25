@@ -266,8 +266,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             {
                 features |= DistroFeature.AgentFramework;
             }
+
             return features;
-        }
         }
 
         private bool TryGetEligibleCollectionWindow(out long previousTicks, out long nowTicks)

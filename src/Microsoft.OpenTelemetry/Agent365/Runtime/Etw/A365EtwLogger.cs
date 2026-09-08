@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Tools;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
@@ -91,7 +92,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? spanId, 
             string? parentSpanId,
             string? traceId,
-            Exception? error = null)
+            Exception? error = null,
+            ActivityKind? spanKind = null)
         {
             var data = InvokeAgentDataBuilder.Build(
                 invokeAgentScopeDetails,
@@ -105,6 +107,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
+                spanKind: (spanKind ?? ActivityKind.Internal).ToString(),
                 traceId: traceId,
                 error: error);
 

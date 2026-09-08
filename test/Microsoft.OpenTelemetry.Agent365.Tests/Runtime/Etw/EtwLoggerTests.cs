@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Tools;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -62,9 +63,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
                 string? spanId = null,
                 string? parentSpanId = null,
                 string? traceId = null,
-                Exception? error = null)
-            {
-            }
+                Exception? error = null,
+                ActivityKind? spanKind = null)
+                {
+                }
 
             public void LogToolCall(
                 ToolCallDetails toolCallDetails,

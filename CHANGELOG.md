@@ -6,7 +6,8 @@
 - Add extensible, dictionary-backed JSON schema models for `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`, including `schema_version` on both payloads and typed Execute Tool span and ETW APIs.
 - Add a thread-safe SDK Stats usage foundation that independently emits feature (`type=0`) and instrumentation (`type=1`) masks at the next scheduled long-interval export.
 - Shift Microsoft distro Feature SDK Stats flags to bits 8–21, reserving bits 0–7 for existing .NET `Track*` feature mappings and preventing backend bitmap conflicts.
-- Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.8.3.
+- Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.9.0.
+- Update `OpenTelemetry`, `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Http`, `OpenTelemetry.Instrumentation.SqlClient`, `OpenTelemetry.Exporter.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and `OpenTelemetry.Exporter.InMemory` to 1.18.0, and `OpenTelemetry.PersistentStorage.FileSystem` to 1.1.1. Updates `Agent365PersistentStorage.TryStore` to bind to the non-obsolete `TryCreateBlob(ReadOnlySpan<byte>, ...)` overload required by the `PersistentStorage.FileSystem` 1.1.1 API.
 - Add durable Agent365 store-and-forward delivery with bounded local storage, restart replay, adaptive shared backoff, and draining shutdown for the asynchronous processor.
 - Customer SDK Stats are now on by default; the distro reports the `CustomerSdkStats` feature bit unless `APPLICATIONINSIGHTS_SDKSTATS_DISABLED=true`.
 - Prefix the distro-owned SDK Stats `version` dimension with the `mot` component label (e.g. `mot1.0.6`) so Feature and Network SDK Stats report the highest-level emitting component per the SDK Version spec, matching the Azure Monitor exporter's format.

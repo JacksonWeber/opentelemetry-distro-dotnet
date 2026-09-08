@@ -84,7 +84,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         public bool TryStore(Agent365DurableRecord record) =>
-            _provider.TryCreateBlob(Agent365DurableRecord.Serialize(record), out _);
+            _provider.TryCreateBlob((ReadOnlySpan<byte>)Agent365DurableRecord.Serialize(record), out _);
 
         public bool TryGetNext(
 #if NETSTANDARD2_0

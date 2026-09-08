@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.0 - 2026-09-08
+
 - InvokeAgentScope now defaults omitted span kind to ActivityKind.Internal while preserving explicit overrides.
 - Add extensible, dictionary-backed JSON schema models for `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`, including `schema_version` on both payloads and typed Execute Tool span and ETW APIs.
 - Add a thread-safe SDK Stats usage foundation that independently emits feature (`type=0`) and instrumentation (`type=1`) masks at the next scheduled long-interval export.
@@ -11,6 +13,8 @@
 - Add durable Agent365 store-and-forward delivery with bounded local storage, restart replay, adaptive shared backoff, and draining shutdown for the asynchronous processor.
 - Customer SDK Stats are now on by default; the distro reports the `CustomerSdkStats` feature bit unless `APPLICATIONINSIGHTS_SDKSTATS_DISABLED=true`.
 - Prefix the distro-owned SDK Stats `version` dimension with the `mot` component label (e.g. `mot1.0.6`) so Feature and Network SDK Stats report the highest-level emitting component per the SDK Version spec, matching the Azure Monitor exporter's format.
+- Fix the SDKStats `os` dimension to fall back to the running process OS (instead of emitting `"unknown"`) when IMDS `azInst_osType` is null, empty, or the literal `"Unknown"`, and honor `APPLICATIONINSIGHTS_SDKSTATS_DISABLED_ALL` and `APPLICATIONINSIGHTS_STATS_LONG_EXPORT_INTERVAL` at the distro's internal SDKStats gating points ([#136](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/136))
+- Patch the transitive `Microsoft.Bcl.Memory` dependency (pulled in at 10.0.2 via `Microsoft.Agents.Builder`) to 10.0.7 ([#150](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/150))
 
 ## 1.0.7 - 2026-07-13
 

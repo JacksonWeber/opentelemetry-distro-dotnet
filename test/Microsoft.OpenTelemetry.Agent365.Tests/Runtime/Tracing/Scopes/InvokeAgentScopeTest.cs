@@ -324,7 +324,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void SpanKind_DefaultsToClient()
+    public void SpanKind_DefaultsToInternal()
     {
         // Act
         var activity = ListenForActivity(() =>
@@ -333,7 +333,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         });
 
         // Assert
-        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Client);
+        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Internal);
     }
 
     [TestMethod]

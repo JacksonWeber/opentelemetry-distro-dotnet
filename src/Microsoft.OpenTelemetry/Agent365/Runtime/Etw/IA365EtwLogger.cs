@@ -5,6 +5,7 @@
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Tools;
 using System;
+using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
@@ -29,6 +30,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
+        /// <param name="spanKind">
+        /// Optional OpenTelemetry span kind. When omitted, Invoke Agent spans default to
+        /// <see cref="ActivityKind.Internal"/>.
+        /// </param>
         public void LogInvokeAgent(
             InvokeAgentScopeDetails invokeAgentScopeDetails,
             AgentDetails agentDetails,
@@ -42,7 +47,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? spanId = null,
             string? parentSpanId = null,
             string? traceId = null,
-            Exception? error = null);
+            Exception? error = null,
+            ActivityKind? spanKind = null);
 
         /// <summary>
         /// Logs an inference event.

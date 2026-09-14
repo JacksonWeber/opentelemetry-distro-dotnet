@@ -133,6 +133,187 @@ public sealed class ExecuteToolScopeTest : ActivityTest
     }
 
     [TestMethod]
+    public void Start_WithTransferDetails_SetsExplicitTransferAttributes()
+    {
+        var sourceAgent = new AgentDetails(agentId: "source-agent-id", agentName: "Source Agent");
+        var targetAgent = new AgentDetails(
+            agentId: "weather-agent-id",
+            agentName: "Weather Agent",
+            agentBlueprintId: "weather-blueprint",
+            agentPlatformId: "weather-platform",
+            agentVersion: "2026.09.10");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
+                new ToolCallDetails(
+                    "handoff",
+                    arguments: null)
+                {
+                    TransferDetails = new TransferDetails(
+                        TransferMode.ReturnToCaller,
+                        targetAgent),
+                },
+                sourceAgent);
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentIdKey, "source-agent-id");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferModeKey, "return_to_caller");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetTypeKey, "agent");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentIdKey, "weather-agent-id");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentNameKey, "Weather Agent");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey, "weather-blueprint");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey, "weather-platform");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentVersionKey, "2026.09.10");
+        activity.Tags
+            .Where(tag => tag.Key.StartsWith("microsoft.a365.transfer.target.", StringComparison.Ordinal))
+            .Select(tag => tag.Key)
+            .Should()
+            .BeEquivalentTo(new[]
+            {
+                OpenTelemetryConstants.TransferTargetTypeKey,
+                OpenTelemetryConstants.TransferTargetAgentIdKey,
+                OpenTelemetryConstants.TransferTargetAgentNameKey,
+                OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey,
+                OpenTelemetryConstants.TransferTargetAgentPlatformIdKey,
+                OpenTelemetryConstants.TransferTargetAgentVersionKey,
+            });
+        activity.Tags
+            .Select(tag => tag.Key)
+            .Should()
+            .NotContain(key => key.StartsWith("gen_ai.transfer.", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void Start_WithoutTransferDetails_OmitsTransferAttributes()
+    {
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
+                new ToolCallDetails("ordinary-tool", (string?)null),
+                Util.GetAgentDetails());
+        });
+
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferModeKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetTypeKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentNameKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentVersionKey);
+    }
+
+    [TestMethod]
+    public void Start_WithTransferModeOnly_OmitsAllTargetAgentAttributes()
+    {
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
+                new ToolCallDetails("handoff", arguments: null)
+                {
+                    TransferDetails = new TransferDetails(TransferMode.PassControl),
+                },
+                Util.GetAgentDetails());
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferModeKey, "pass_control");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetTypeKey, "agent");
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentNameKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentVersionKey);
+        activity.Tags
+            .Where(tag => tag.Key.StartsWith("microsoft.a365.transfer.target.", StringComparison.Ordinal))
+            .Select(tag => tag.Key)
+            .Should()
+            .BeEquivalentTo(new[]
+            {
+                OpenTelemetryConstants.TransferTargetTypeKey,
+            });
+        activity.Tags
+            .Select(tag => tag.Key)
+            .Should()
+            .NotContain(key => key.StartsWith("gen_ai.transfer.", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void Start_WithPartialTargetAgentDetails_OmitsNullTargetAgentAttributes()
+    {
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
+                new ToolCallDetails(
+                    "handoff",
+                    arguments: null)
+                {
+                    TransferDetails = new TransferDetails(
+                        TransferMode.ReturnToCaller,
+                        new AgentDetails(
+                            agentId: "weather-agent-id",
+                            agentVersion: "2026.09.11")),
+                },
+                Util.GetAgentDetails());
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferModeKey, "return_to_caller");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentIdKey, "weather-agent-id");
+        activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetAgentVersionKey, "2026.09.11");
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentNameKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey);
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey);
+    }
+
+    [TestMethod]
+    public void Start_WithExplicitNonAgentTransferTargetTypes_SetsOnlyTargetTypeAttribute()
+    {
+        void AssertTargetType(TransferTargetType targetType, string expectedValue)
+        {
+            var activity = ListenForActivity(() =>
+            {
+                using var scope = ExecuteToolScope.Start(
+                    Util.GetDefaultRequest(),
+                    new ToolCallDetails(
+                        "handoff",
+                        arguments: null)
+                    {
+                        TransferDetails = new TransferDetails(
+                            TransferMode.PassControl,
+                            targetType),
+                    },
+                    Util.GetAgentDetails());
+            });
+
+            activity.ShouldHaveTag(OpenTelemetryConstants.TransferModeKey, "pass_control");
+            activity.ShouldHaveTag(OpenTelemetryConstants.TransferTargetTypeKey, expectedValue);
+            activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentIdKey);
+            activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentNameKey);
+            activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey);
+            activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey);
+            activity.Tags.Should().NotContainKey(OpenTelemetryConstants.TransferTargetAgentVersionKey);
+            activity.Tags
+                .Where(tag => tag.Key.StartsWith("microsoft.a365.transfer.target.", StringComparison.Ordinal))
+                .Select(tag => tag.Key)
+                .Should()
+                .BeEquivalentTo(new[]
+                {
+                    OpenTelemetryConstants.TransferTargetTypeKey,
+                });
+            activity.Tags
+                .Select(tag => tag.Key)
+                .Should()
+                .NotContain(key => key.StartsWith("gen_ai.transfer.", StringComparison.Ordinal));
+        }
+
+        AssertTargetType(TransferTargetType.Human, "human");
+        AssertTargetType(TransferTargetType.Workflow, "workflow");
+    }
+
+    [TestMethod]
     public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
     {
         // Arrange

@@ -210,6 +210,23 @@ public sealed class Agent365ExporterTests
     }
 
     [TestMethod]
+    public void PartitionByIdentity_ExcludesWhitespaceOnlyTenantOrAgentId()
+    {
+        // A whitespace-only tenant or agent id is not a real identity: it must be excluded exactly
+        // like a null/empty one, matching the registry's own whitespace rejection for tenant ids.
+        using var whitespaceTenant = CreateActivity("   ", "agent-1");
+        using var whitespaceAgent = CreateActivity("tenant-1", "   ");
+        using var valid = CreateActivity("tenant-1", "agent-1");
+
+        var batch = CreateBatch(whitespaceTenant, whitespaceAgent, valid);
+
+        var groups = _agent365ExporterCore.PartitionByIdentity(in batch);
+
+        groups.Should().HaveCount(1);
+        groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-1" && g.Activities.Count == 1);
+    }
+
+    [TestMethod]
     public void PartitionByIdentity_FiltersOutNonGenAISpans()
     {
         // Arrange

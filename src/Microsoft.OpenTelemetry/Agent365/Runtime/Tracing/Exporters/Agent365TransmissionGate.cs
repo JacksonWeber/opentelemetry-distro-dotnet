@@ -28,6 +28,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         internal TimeSpan CurrentDelay => Volatile.Read(ref _snapshot).NextProbeTime - _utcNow();
 
+        internal bool HasPendingBackoff
+        {
+            get
+            {
+                var current = Volatile.Read(ref _snapshot);
+                return current.State == GateState.Backoff && _utcNow() < current.NextProbeTime;
+            }
+        }
+
         internal bool TryAcquire(out bool ownsProbe)
         {
             while (true)

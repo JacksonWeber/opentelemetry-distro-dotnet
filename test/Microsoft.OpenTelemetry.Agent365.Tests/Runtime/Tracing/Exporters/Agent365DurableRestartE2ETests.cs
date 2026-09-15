@@ -170,7 +170,7 @@ public sealed class Agent365DurableRestartE2ETests
 
                 var coordinator = new Agent365ReplayCoordinator(
                     secondStorage,
-                    secondGate,
+                    secondCore.Gates,
                     replayAsync: (record, ct) => secondCore.ReplayRecordAsync(
                         record,
                         options,

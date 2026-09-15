@@ -69,7 +69,7 @@ public sealed class Agent365PersistentStorageReplayIntegrationTests
 
         return new Agent365ReplayCoordinator(
             storage,
-            gate,
+            core.Gates,
             (record, ct) => core.ReplayRecordAsync(record, options, tokenResolver, sendAsync, ct),
             NullLogger.Instance);
     }

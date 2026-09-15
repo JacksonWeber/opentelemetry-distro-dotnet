@@ -15,13 +15,19 @@ namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 /// <summary>
 /// Exercises the durable replay contract of <see cref="Agent365ReplayCoordinator"/> and the fresh
 /// authentication entry point <see cref="Agent365ExporterCore.ReplayRecordAsync"/>:
-/// each pass asks the shared <see cref="Agent365TransmissionGate"/> for a permit, reads at most ten
-/// leased records, resolves a *fresh* token per record (including the agentic user id), sends once,
-/// and drives storage — success deletes, retryable retains and stops the pass, a permanent send
-/// failure or an unreadable/poison (undeserializable) blob deletes it, an unknown replay fault or
-/// global misconfiguration retains the current record and stops the pass (durable telemetry is never
-/// deleted for an unknown fault), a missing token retains the record for a later pass, and a delete
-/// failure after a successful send logs the duplicate risk. Owned half-open probes are always released.
+/// each pass scans a bounded number of leased records, attempts at most ten, and only after a record
+/// is leased and successfully deserialized consults that record's tenant's gate through the shared
+/// <see cref="Agent365TransmissionGateRegistry"/> — the same registry the live send path coordinates
+/// through, so a tenant backed off by a live failure is also skipped by replay and vice versa. A
+/// tenant whose gate is in backoff has its record retained without an HTTP attempt, but the pass keeps
+/// scanning later records so another tenant still gets its chance in the same pass. Per record, once
+/// a fresh token is resolved and the send is attempted: success deletes, a retryable failure backs off
+/// only that tenant's gate and retains the record (the pass continues to later records), a permanent
+/// send failure or an unreadable/poison (undeserializable) blob deletes it, an unknown replay fault or
+/// global misconfiguration retains the current record and stops the whole pass (durable telemetry is
+/// never deleted for an unknown fault), a missing token retains the record for a later pass, and a
+/// delete failure after a successful send logs the duplicate risk. Each record's owned half-open probe
+/// is always released when that record recorded no terminal gate outcome.
 /// </summary>
 [TestClass]
 public sealed class Agent365ReplayCoordinatorTests
@@ -49,6 +55,7 @@ public sealed class Agent365ReplayCoordinatorTests
         Func<string, string, Task<string?>>? tokenResolver = null,
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? sendAsync = null,
         Agent365TransmissionGate? gate = null,
+        Agent365TransmissionGateRegistry? gates = null,
         ILogger? logger = null,
         int maxRecordsPerPass = 10,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
@@ -56,7 +63,11 @@ public sealed class Agent365ReplayCoordinatorTests
         AsyncContextualTokenResolver? contextualResolver = null,
         TenantDomainResolver? domainResolver = null)
     {
-        gate ??= new Agent365TransmissionGate(() => _now);
+        // gate/gates are left null by default so most tests exercise the real per-tenant registry
+        // (each tenant id gets its own independently-tracked gate). Tests that need a handle on a
+        // specific tenant's gate object pass `gate:` (pinning every tenant to that one instance,
+        // sufficient for single-tenant scenarios) or `gates:` (a real registry shared across the
+        // live and replay paths, needed for genuine multi-tenant scenarios).
         tokenResolver ??= (_, _) => Task.FromResult<string?>("fresh-token");
         sendAsync ??= (_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
 
@@ -71,11 +82,12 @@ public sealed class Agent365ReplayCoordinatorTests
             NullLogger<Agent365ExporterCore>.Instance,
             () => _now,
             storage,
-            gate);
+            gate,
+            gates);
 
         return new Agent365ReplayCoordinator(
             storage,
-            gate,
+            core.Gates,
             replayAsync: (record, ct) => core.ReplayRecordAsync(record, options, tokenResolver, sendAsync, ct),
             logger ?? NullLogger.Instance,
             replayInterval,
@@ -174,8 +186,11 @@ public sealed class Agent365ReplayCoordinatorTests
     // ------------------------------------------------------------------ retryable
 
     [TestMethod]
-    public async Task RetryableFailureRetainsRecordAndStopsPass()
+    public async Task RetryableFailureForSameTenantRetainsLaterRecordWithoutSending()
     {
+        // Both records belong to the default tenant ("tenant-1"). Once the first record backs that
+        // tenant's gate off, the second record for the SAME tenant must still be leased and read (to
+        // learn its tenant) but must not attempt HTTP while that tenant's gate is in backoff.
         var first = FakeStoredRecord.From(CreateRecord(agentId: "agent-1"));
         var second = FakeStoredRecord.From(CreateRecord(agentId: "agent-2"));
         var storage = new FakeStorage(first, second);
@@ -190,10 +205,153 @@ public sealed class Agent365ReplayCoordinatorTests
 
         await coordinator.ReplayOnceAsync(CancellationToken.None);
 
-        sends.Should().Be(1, "the pass stops after the first retryable outcome");
-        first.DeleteCalls.Should().Be(0, "a retryable record is retained for a later pass");
-        second.ReadCalls.Should().Be(0, "the second record is not processed once the pass stops");
-        second.DeleteCalls.Should().Be(0);
+        sends.Should().Be(1, "the second same-tenant record is skipped once that tenant's gate is in backoff");
+        first.DeleteCalls.Should().Be(0, "the first record is retained after its retryable failure");
+        second.LeaseCalls.Should().Be(1, "the second record is still leased to learn its tenant before the gate check");
+        second.ReadCalls.Should().Be(1, "the second record is still read to learn its tenant before the gate check");
+        second.DeleteCalls.Should().Be(0, "the second record is retained without an HTTP attempt while its tenant's gate is in backoff");
+    }
+
+    [TestMethod]
+    public async Task RetryableFailureForOneTenantDoesNotStopAnotherTenant()
+    {
+        var tenantA = FakeStoredRecord.From(CreateRecord(tenantId: "tenant-a", agentId: "agent-a"));
+        var tenantB = FakeStoredRecord.From(CreateRecord(tenantId: "tenant-b", agentId: "agent-b"));
+        var storage = new FakeStorage(tenantA, tenantB);
+        var sends = 0;
+        var coordinator = CreateCoordinator(
+            storage,
+            sendAsync: (request, _) =>
+            {
+                sends++;
+                var isTenantA = request.RequestUri!.ToString().Contains("tenants/tenant-a/");
+                return Task.FromResult(new HttpResponseMessage(
+                    isTenantA ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK));
+            });
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        sends.Should().Be(2, "a retryable failure for tenant A must not stop the pass from reaching tenant B");
+        tenantA.DeleteCalls.Should().Be(0, "tenant A's record is retained after its retryable failure");
+        tenantB.DeleteCalls.Should().Be(1, "tenant B is delivered and deleted in the same pass");
+    }
+
+    [TestMethod]
+    public async Task TenantInBackoffIsSkippedWhileAnotherTenantReplays()
+    {
+        // Pre-close tenant A's gate through a lease taken directly from the shared registry, exactly
+        // as a prior live send or replay pass would have left it.
+        var registry = new Agent365TransmissionGateRegistry(utcNow: () => _now);
+        using (var preLease = registry.Acquire("tenant-a"))
+        {
+            preLease.Gate.RecordRetryableFailure(null);
+        }
+
+        var tenantA = FakeStoredRecord.From(CreateRecord(tenantId: "tenant-a", agentId: "agent-a"));
+        var tenantB = FakeStoredRecord.From(CreateRecord(tenantId: "tenant-b", agentId: "agent-b"));
+        var storage = new FakeStorage(tenantA, tenantB);
+        var sends = 0;
+        var coordinator = CreateCoordinator(
+            storage,
+            gates: registry,
+            sendAsync: (_, _) =>
+            {
+                sends++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            });
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        sends.Should().Be(1, "tenant A's gate is already in backoff, so only tenant B attempts HTTP");
+        tenantA.LeaseCalls.Should().Be(1, "tenant A's record is still leased to learn its tenant before the gate check");
+        tenantA.ReadCalls.Should().Be(1, "tenant A's record is still read to learn its tenant before the gate check");
+        tenantA.DeleteCalls.Should().Be(0, "tenant A's record is retained while its gate is in backoff");
+        tenantB.DeleteCalls.Should().Be(1, "tenant B is unaffected by tenant A's backoff and is delivered in the same pass");
+    }
+
+    [TestMethod]
+    public async Task BackedOffPrefixLongerThanMaxRecordsPerPassDoesNotStarveALaterTenant()
+    {
+        // A long prefix of records for a backed-off tenant must not consume the per-pass cap: each of
+        // them is only leased/read (to learn its tenant) then skipped without an HTTP attempt, so the
+        // pass must still reach and send a later, different tenant's record in the same pass even
+        // though the backed-off prefix alone is as long as (or longer than) maxRecordsPerPass.
+        const int maxRecordsPerPass = 10;
+        var registry = new Agent365TransmissionGateRegistry(utcNow: () => _now);
+        using (var preLease = registry.Acquire("tenant-a"))
+        {
+            preLease.Gate.RecordRetryableFailure(null);
+        }
+
+        var backedOffRecords = Enumerable.Range(0, maxRecordsPerPass)
+            .Select(_ => FakeStoredRecord.From(CreateRecord(tenantId: "tenant-a", agentId: "agent-a")))
+            .ToArray();
+        var tenantB = FakeStoredRecord.From(CreateRecord(tenantId: "tenant-b", agentId: "agent-b"));
+        var storage = new FakeStorage(backedOffRecords.Concat(new[] { tenantB }).ToArray());
+        var sends = 0;
+        var coordinator = CreateCoordinator(
+            storage,
+            gates: registry,
+            maxRecordsPerPass: maxRecordsPerPass,
+            sendAsync: (_, _) =>
+            {
+                sends++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            });
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        sends.Should().Be(1, "only tenant B's record ever gets a real HTTP attempt in this pass");
+        backedOffRecords.Should().OnlyContain(
+            r => r.LeaseCalls == 1 && r.ReadCalls == 1 && r.DeleteCalls == 0,
+            "each backed-off record is still leased/read but retained without an HTTP attempt");
+        tenantB.DeleteCalls.Should().Be(1, "tenant B is delivered and deleted in the same pass despite the long backed-off prefix");
+        storage.PendingCount.Should().Be(0, "the backed-off prefix must not consume the pass cap before tenant B is reached");
+    }
+
+    [TestMethod]
+    public async Task AllBackedOffRecordsStopAtTheScanBudget()
+    {
+        const int maxRecordsPerPass = 10;
+        var scanBudget = Agent365ReplayCoordinator.CalculateDefaultScanBudget(maxRecordsPerPass);
+        var registry = new Agent365TransmissionGateRegistry(utcNow: () => _now);
+        using (var preLease = registry.Acquire("tenant-a"))
+        {
+            preLease.Gate.RecordRetryableFailure(null);
+        }
+
+        var backedOffRecords = Enumerable.Range(0, scanBudget + 1)
+            .Select(i => FakeStoredRecord.From(CreateRecord(tenantId: "tenant-a", agentId: $"agent-a-{i}")))
+            .ToArray();
+        var storage = new FakeStorage(backedOffRecords);
+        var sends = 0;
+        var coordinator = CreateCoordinator(
+            storage,
+            gates: registry,
+            maxRecordsPerPass: maxRecordsPerPass,
+            sendAsync: (_, _) =>
+            {
+                sends++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            });
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        sends.Should().Be(0, "every record belongs to a tenant already in backoff, so no HTTP attempt occurs");
+        backedOffRecords.Take(scanBudget).Should().OnlyContain(
+            r => r.LeaseCalls == 1 && r.ReadCalls == 1 && r.DeleteCalls == 0,
+            "the pass scans only up to the scan budget before stopping");
+        backedOffRecords.Skip(scanBudget).Should().OnlyContain(
+            r => r.LeaseCalls == 0 && r.ReadCalls == 0 && r.DeleteCalls == 0,
+            "records beyond the scan budget are left untouched for a later pass");
+        storage.PendingCount.Should().Be(1, "one backed-off record remains queued because the pass stopped at its scan budget");
+    }
+
+    [TestMethod]
+    public void DefaultScanBudgetUsesAtLeastTenTimesTheAttemptCapAndSaturatesSafely()
+    {
+        Agent365ReplayCoordinator.CalculateDefaultScanBudget(10).Should().BeGreaterOrEqualTo(100);
+        Agent365ReplayCoordinator.CalculateDefaultScanBudget(int.MaxValue).Should().Be(int.MaxValue);
     }
 
     [TestMethod]
@@ -516,8 +674,11 @@ public sealed class Agent365ReplayCoordinatorTests
     // ------------------------------------------------------------------ gate permits
 
     [TestMethod]
-    public async Task GateInBackoffSkipsPassEntirely()
+    public async Task GateInBackoffSkipsSendButStillLeasesAndReadsTheRecord()
     {
+        // The tenant gate is only consulted after a record is leased and successfully deserialized
+        // (its tenant must be known first), so a backed-off tenant still has its record leased/read;
+        // only the HTTP attempt is skipped.
         var stored = FakeStoredRecord.From(CreateRecord());
         var storage = new FakeStorage(stored);
         var sends = 0;
@@ -532,9 +693,10 @@ public sealed class Agent365ReplayCoordinatorTests
 
         await coordinator.ReplayOnceAsync(CancellationToken.None);
 
-        sends.Should().Be(0, "no permit is granted while the gate is in backoff");
-        storage.PendingCount.Should().Be(1, "the record is not even read while the gate is closed");
-        stored.LeaseCalls.Should().Be(0);
+        sends.Should().Be(0, "no HTTP attempt is made while the tenant's gate is in backoff");
+        stored.LeaseCalls.Should().Be(1, "the record is still leased to learn its tenant before the gate check");
+        stored.ReadCalls.Should().Be(1, "the record is still read to learn its tenant before the gate check");
+        stored.DeleteCalls.Should().Be(0, "the record is retained while the tenant's gate is in backoff");
     }
 
     [TestMethod]
@@ -554,6 +716,35 @@ public sealed class Agent365ReplayCoordinatorTests
         // returned: a subsequent acquire still owns the single probe (it was not leaked).
         gate.TryAcquire(out var ownsProbe).Should().BeTrue();
         ownsProbe.Should().BeTrue("the owned probe was released, not leaked");
+    }
+
+    [TestMethod]
+    public async Task SecondSameTenantRecordReacquiresProbeReleasedByFirstNonTerminalRecord()
+    {
+        // Regression coverage: within a single pass, two same-tenant records share one half-open
+        // probe. The first record's non-terminal outcome (permanent failure) must release the probe
+        // it owned so the second, later record for the SAME tenant can immediately reacquire it and
+        // still get its own real HTTP attempt in this same pass (not silently skipped as backed off).
+        var first = FakeStoredRecord.From(CreateRecord(agentId: "agent-1"));
+        var second = FakeStoredRecord.From(CreateRecord(agentId: "agent-2"));
+        var storage = new FakeStorage(first, second);
+        var gate = ProbeGate();
+        var sends = 0;
+        var coordinator = CreateCoordinator(
+            storage,
+            gate: gate,
+            sendAsync: (_, _) =>
+            {
+                sends++;
+                return Task.FromResult(new HttpResponseMessage(
+                    sends == 1 ? HttpStatusCode.Forbidden : HttpStatusCode.OK));
+            });
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        sends.Should().Be(2, "the second same-tenant record must reacquire the probe the first record released");
+        first.DeleteCalls.Should().Be(1, "the first record's permanent failure deletes it");
+        second.DeleteCalls.Should().Be(1, "the second record reacquires the probe and is delivered");
     }
 
     [TestMethod]

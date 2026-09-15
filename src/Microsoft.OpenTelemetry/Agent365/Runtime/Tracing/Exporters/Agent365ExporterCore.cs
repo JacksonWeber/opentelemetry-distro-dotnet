@@ -33,7 +33,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private const string FoundryUrl403 = "https://aka.ms/foundry-grant-agent-365-permissions";
         private readonly ExportFormatter _formatter;
         private readonly ILogger<Agent365ExporterCore> _logger;
-        private readonly Agent365TransmissionGate _gate;
+        private readonly Agent365TransmissionGateRegistry _gates;
         private readonly Lazy<IAgent365PersistentStorage> _storage;
         private readonly Func<DateTimeOffset> _utcNow;
 
@@ -65,12 +65,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             ILogger<Agent365ExporterCore> logger,
             Func<DateTimeOffset>? utcNow,
             IAgent365PersistentStorage? storage,
-            Agent365TransmissionGate? gate)
+            Agent365TransmissionGate? gate = null,
+            Agent365TransmissionGateRegistry? gates = null)
         {
             _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
             _logger = logger ?? NullLogger<Agent365ExporterCore>.Instance;
             _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
-            _gate = gate ?? new Agent365TransmissionGate(_utcNow);
+            _gates = gates
+                ?? (gate != null
+                    ? new Agent365TransmissionGateRegistry(utcNow: _utcNow, gateFactory: () => gate)
+                    : new Agent365TransmissionGateRegistry(utcNow: _utcNow));
 
             // Resolved lazily so that a core which never persists (e.g. everything delivers on the
             // first attempt, or an injected fake is supplied) never creates the on-disk
@@ -88,10 +92,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         internal IAgent365PersistentStorage Storage => _storage.Value;
 
         /// <summary>
-        /// The transmission gate this core coordinates send availability through. Shared with the replay
-        /// coordinator so live sends and replay passes observe a single backoff/half-open state.
+        /// The shared tenant gate registry this core coordinates live-send and replay availability
+        /// through. Both the live send path and the durable replay coordinator built from this core
+        /// acquire a tenant's gate from this same registry, so a tenant's availability state is shared
+        /// across live and replay.
         /// </summary>
-        internal Agent365TransmissionGate Gate => _gate;
+        internal Agent365TransmissionGateRegistry Gates => _gates;
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
@@ -236,6 +242,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             {
                 var (tenantId, agentId, activities) = g;
 
+                // ExportBatchCoreAsync is internal and can be called directly with a caller-constructed
+                // groups list that bypasses PartitionByIdentity's own whitespace/empty filtering (e.g. a
+                // test double, or a future caller). A whitespace/null/empty tenant id reaching
+                // _gates.Acquire(tenantId) below would throw ArgumentException, which — thrown from
+                // inside this foreach — would abort the whole cross-tenant batch and discard every other,
+                // well-formed group. Treat a malformed identity as this one group's permanent failure
+                // instead: skip it (no send, no persist — there is no valid tenant to key a durable
+                // record by) and keep processing the remaining groups.
+                if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(agentId))
+                {
+                    this._logger?.LogWarning(
+                        "Agent365ExporterCore: Malformed identity group (missing or whitespace-only tenant/agent id). Skipping export for this identity.");
+                    anyPermanentFailure = true;
+                    continue;
+                }
+
                 // Split the per-identity batch into byte-size chunks under MaxPayloadBytes.
                 // Per-span truncation already caps individual spans at 250 KB; this provides
                 // batch-level enforcement of the 1 MB server limit.
@@ -340,10 +362,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                         json,
                         _utcNow());
 
-                    if (!_gate.TryAcquire(out var ownsProbe))
+                    using var gateLease = _gates.Acquire(tenantId);
+                    var gateForTenant = gateLease.Gate;
+                    if (!gateForTenant.TryAcquire(out var ownsProbe))
                     {
-                        // Gate is in backoff: skip the network entirely. Only log the outcome after
-                        // TryStore so the message is accurate regardless of storage type.
+                        // This tenant's gate is in backoff: skip the network entirely. Only log the
+                        // outcome after TryStore so the message is accurate regardless of storage type.
                         if (!_storage.Value.TryStore(record))
                         {
                             this._logger?.LogWarning(
@@ -379,11 +403,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                         switch (outcome.Disposition)
                         {
                             case Agent365SendDisposition.Delivered:
-                                _gate.RecordSuccess();
+                                gateForTenant.RecordSuccess();
                                 break;
 
                             case Agent365SendDisposition.RetryableFailure:
-                                _gate.RecordRetryableFailure(outcome.RetryAfter);
+                                gateForTenant.RecordRetryableFailure(outcome.RetryAfter);
                                 if (!_storage.Value.TryStore(record))
                                 {
                                     this._logger?.LogWarning(
@@ -409,7 +433,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     finally
                     {
                         if (ownsProbe)
-                            _gate.ReleaseProbe();
+                            gateForTenant.ReleaseProbe();
                     }
 
                     if (permanentFailureForGroup)
@@ -719,7 +743,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
             var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey) ?? activity.GetAttributeOrBaggage(OpenTelemetryConstants.AgentPlatformIdKey);
 
-            if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
+            // A whitespace-only tenant or agent id is not a usable identity: reject it the same as
+            // null/empty so it lines up with the gate registry's own whitespace rejection for tenant ids
+            // (Agent365TransmissionGateRegistry.Acquire) rather than silently forming a bogus group.
+            if (string.IsNullOrWhiteSpace(tenant) || string.IsNullOrWhiteSpace(agent))
                 return AddResult.MissingIdentity;
 
             var key = (tenant!, agent!);

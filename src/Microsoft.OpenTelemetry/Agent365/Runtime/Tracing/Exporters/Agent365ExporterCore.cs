@@ -600,15 +600,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 using var response = await sendAsync(request, cancellationToken).ConfigureAwait(false);
                 stopwatch.Stop();
 
-                if (response.IsSuccessStatusCode)
-                {
-                    DistroNetworkSdkStats.Instance?.TrackResponse(requestHost, (int)response.StatusCode, stopwatch.Elapsed.TotalMilliseconds);
-                    return new Agent365SendOutcome(Agent365SendDisposition.Delivered, null);
-                }
-
                 var correlationId = response.Headers.Contains(CorrelationIdHeaderKey)
                     ? response.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault()
                     : null;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    DistroNetworkSdkStats.Instance?.TrackResponse(requestHost, (int)response.StatusCode, stopwatch.Elapsed.TotalMilliseconds);
+                    _logger?.LogInformation(
+                        "Agent365ExporterCore: HTTP {StatusCode} success for chunk {ChunkIndex} of {ChunkCount}. Correlation ID: {CorrelationId}.",
+                        (int)response.StatusCode,
+                        chunkIndex,
+                        chunkCount,
+                        correlationId ?? "N/A");
+                    return new Agent365SendOutcome(Agent365SendDisposition.Delivered, null);
+                }
+
                 var retryable = Agent365TransmissionGate.IsRetryable(response.StatusCode);
 
                 DistroNetworkSdkStats.Instance?.TrackResponse(requestHost, (int)response.StatusCode, stopwatch.Elapsed.TotalMilliseconds);

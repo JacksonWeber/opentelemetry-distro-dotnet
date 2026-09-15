@@ -185,7 +185,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", tenantId: Guid.NewGuid().ToString());
-            var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
+            var targetAgentDetails = new AgentDetails(
+                "target-agent-id",
+                agentName: "target-agent-name",
+                agentBlueprintId: "target-blueprint-id",
+                agentPlatformId: "target-platform-id",
+                agentVersion: "target-version");
+            var toolDetails = new ToolCallDetails(
+                "tool-a",
+                arguments: @"{ ""arg"": 1 }",
+                toolCallId: "tool-call-1",
+                description: "desc",
+                toolType: "function")
+            {
+                TransferDetails = new TransferDetails(TransferMode.ReturnToCaller, targetAgentDetails),
+            };
             string conversationId = "conv-tool-1";
             string responseContent = @"{ ""value"": ""result"" }";
             var source = new Channel(name: "ChannelInf", link: "https://channel/inf");
@@ -216,6 +230,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("desc", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolDescriptionKey).GetString());
             Assert.AreEqual("function", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolTypeKey).GetString());
             Assert.AreEqual(responseContent, attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolCallResultKey).GetString());
+            Assert.AreEqual("return_to_caller", attrsElement.GetProperty(OpenTelemetryConstants.TransferModeKey).GetString());
+            Assert.AreEqual("agent", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetTypeKey).GetString());
+            Assert.AreEqual("target-agent-id", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetAgentIdKey).GetString());
+            Assert.AreEqual("target-agent-name", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetAgentNameKey).GetString());
+            Assert.AreEqual("target-blueprint-id", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey).GetString());
+            Assert.AreEqual("target-platform-id", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetAgentPlatformIdKey).GetString());
+            Assert.AreEqual("target-version", attrsElement.GetProperty(OpenTelemetryConstants.TransferTargetAgentVersionKey).GetString());
             Assert.AreEqual("execute_tool", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelNameKey).GetString());
             Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelLinkKey).GetString());

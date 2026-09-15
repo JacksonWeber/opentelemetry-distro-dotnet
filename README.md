@@ -292,6 +292,7 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 
 - [Azure.Monitor.OpenTelemetry.AspNetCore.Demo](examples/Azure.Monitor.OpenTelemetry.AspNetCore.Demo) — ASP.NET Core → Azure Monitor
 - [Microsoft.OpenTelemetry.Agent365.Demo](examples/Microsoft.OpenTelemetry.Agent365.Demo) — Agent Framework app → Agent365
+- [Agent365 S2S Observability Sample](examples/Microsoft.OpenTelemetry.Agent365.S2S.Demo/README.md)
 - [Microsoft.OpenTelemetry.AgentFramework.Demo](examples/Microsoft.OpenTelemetry.AgentFramework.Demo) — Agent Framework → OTLP / Azure Monitor
 - [Microsoft.OpenTelemetry.Fabric.Demo](examples/Microsoft.OpenTelemetry.Fabric.Demo) — ASP.NET Core → OTLP → OTel Collector → Microsoft Fabric / Azure Data Explorer
 

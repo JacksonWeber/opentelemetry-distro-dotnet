@@ -213,6 +213,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                     AddIfNotNull(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
                 }
             }
+
+            var transferDetails = toolCallDetails.TransferDetails;
+            if (transferDetails != null)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.TransferModeKey, transferDetails.ModeValue);
+                AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetTypeKey, transferDetails.TargetTypeValue);
+
+                var targetAgentDetails = transferDetails.TargetAgentDetails;
+                if (targetAgentDetails != null)
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetAgentIdKey, targetAgentDetails.AgentId);
+                    AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetAgentNameKey, targetAgentDetails.AgentName);
+                    AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetAgentBlueprintIdKey, targetAgentDetails.AgentBlueprintId);
+                    AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetAgentPlatformIdKey, targetAgentDetails.AgentPlatformId);
+                    AddIfNotNull(attributes, OpenTelemetryConstants.TransferTargetAgentVersionKey, targetAgentDetails.AgentVersion);
+                }
+            }
         }
     }
 }

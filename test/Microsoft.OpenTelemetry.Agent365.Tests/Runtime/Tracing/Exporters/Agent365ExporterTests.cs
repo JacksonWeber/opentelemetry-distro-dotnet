@@ -1355,6 +1355,46 @@ public sealed class Agent365ExporterTests
 
     #endregion
 
+    #region HTTP 200 Success Logging Tests
+
+    [TestMethod]
+    public void Export_Http200_LogsStatusAndCorrelationId()
+    {
+        var handler = new TestHttpMessageHandler(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Headers.Add("x-ms-correlation-id", "success-correlation-id");
+            return response;
+        });
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = true,
+            DomainResolver = _ => "test.example.com",
+        };
+        var logger = new InMemoryLogger();
+        var core = new Agent365ExporterCore(
+            new ExportFormatter(NullLogger<ExportFormatter>.Instance),
+            logger);
+        var exporter = new Agent365Exporter(
+            core,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            ResourceBuilder.CreateEmpty().AddService("test").Build(),
+            new HttpClient(handler));
+        using var activity = CreateActivity("tenant-200", "agent-200");
+        var batch = CreateBatch(activity);
+
+        var result = exporter.Export(in batch);
+
+        result.Should().Be(ExportResult.Success);
+        logger.LogMessages.Should().ContainSingle(message =>
+            message.Contains("HTTP 200")
+            && message.Contains("success-correlation-id"));
+    }
+
+    #endregion
+
     #region HTTP 403 Actionable Error Message Tests
 
     [TestMethod]

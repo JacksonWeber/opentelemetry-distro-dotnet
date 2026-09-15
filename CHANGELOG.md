@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Support tracing A2A via execute tool span.
+- Add a self-contained Agent365 service-to-service sample that uses app-only MSAL authentication and emits manual Invoke Agent, Inference, and Execute Tool spans without the Agents Framework ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))
+- Log successful Agent365 export responses with the HTTP status code and correlation ID ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))
+
 ## 1.1.0 - 2026-09-08
 
 - InvokeAgentScope now defaults omitted span kind to ActivityKind.Internal while preserving explicit overrides.

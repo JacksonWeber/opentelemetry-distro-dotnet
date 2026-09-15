@@ -602,13 +602,25 @@ scope.RecordOutputMessages(new[] { "Here is the response." });
 Track tool execution with telemetry for monitoring and auditing.
 
 ```csharp
+var targetAgentDetails = new AgentDetails(
+    agentId: "weather-agent-id",
+    agentName: "Weather Agent",
+    agentBlueprintId: "weather-blueprint",
+    agentPlatformId: "weather-platform",
+    agentVersion: "2026.09.10");
+
 var toolCallDetails = new ToolCallDetails(
-    toolName: "summarize",
-    arguments: "{\"text\": \"...\"}",
+    toolName: "handoff",
+    arguments: "{\"city\":\"Seattle\",\"units\":\"metric\"}",
     toolCallId: "tc-001",
-    description: "Summarize provided text",
+    description: "Delegate weather lookup to the weather specialist agent",
     toolType: "function",
-    endpoint: new Uri("https://tools.contoso.com:8080"));
+    endpoint: new Uri("https://weather-agent.contoso.com"))
+{
+    TransferDetails = new TransferDetails(
+        mode: TransferMode.ReturnToCaller,
+        targetAgentDetails: targetAgentDetails),
+};
 
 using var scope = ExecuteToolScope.Start(
     request: request,
@@ -617,8 +629,30 @@ using var scope = ExecuteToolScope.Start(
 
 // ... your tool logic here ...
 
-scope.RecordResponse("{\"summary\": \"The text was summarized.\"}");
+scope.RecordResponse("{\"status\": \"returned_to_caller\", \"target\": \"weather-agent\"}");
 ```
+
+`agentDetails` identifies the source agent executing the tool. `TransferDetails`
+describes the explicit transfer exposed by this tool call. The ergonomic
+constructor (`new TransferDetails(mode, targetAgentDetails)`) defaults
+`TransferDetails.TargetType` to `TransferTargetType.Agent`, so both mode-only
+and target-agent transfers emit `microsoft.a365.transfer.target.type=agent`.
+Use `TransferDetails.TargetAgentDetails` only when your application already
+knows the target agent identity. The SDK emits
+`microsoft.a365.transfer.mode`, `microsoft.a365.transfer.target.type`, and only
+the five supported target-agent fields from `TargetAgentDetails` (`AgentId`,
+`AgentName`, `AgentBlueprintId`, `AgentPlatformId`, and `AgentVersion`); other
+`AgentDetails` properties are not emitted for this transfer model. For future
+non-agent handoffs, use the explicit overload such as
+`new TransferDetails(TransferMode.PassControl, TransferTargetType.Human)` or
+`new TransferDetails(TransferMode.PassControl, TransferTargetType.Workflow)`.
+Those transfers emit the transfer mode and target type, but no target-agent
+identity attributes, and reject `TargetAgentDetails` to avoid contradictory
+telemetry. The SDK never infers target attributes for ordinary tool calls. Keep
+the required tool metadata
+(`arguments`, `toolCallId`, `description`, `toolType`, and `endpoint`) on
+`ToolCallDetails`, then attach `TransferDetails` with an object initializer for
+the explicit handoff metadata.
 
 **Available methods:**
 
@@ -839,6 +873,13 @@ Received HTTP response headers after *ms - 200
     "gen_ai.tool.description": "Optional",
     "gen_ai.tool.name": "Required",
     "gen_ai.tool.type": "Required",
+    "microsoft.a365.transfer.mode": "Optional",
+    "microsoft.a365.transfer.target.type": "Optional",
+    "microsoft.a365.transfer.target.agent.id": "Optional",
+    "microsoft.a365.transfer.target.agent.name": "Optional",
+    "microsoft.a365.transfer.target.agent.blueprint.id": "Optional",
+    "microsoft.a365.transfer.target.agent.platform.id": "Optional",
+    "microsoft.a365.transfer.target.agent.version": "Optional",
     "server.address": "Optional",
     "server.port": "Optional",
     "microsoft.session.id": "Optional",

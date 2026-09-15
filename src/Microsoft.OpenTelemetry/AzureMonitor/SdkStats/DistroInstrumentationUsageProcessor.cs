@@ -127,13 +127,16 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             }
 
             if (IsCandidate(candidates, DistroInstrumentation.AspNetCore)
-                && sourceName.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal))
+                && (sourceName.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal)
+                    || string.Equals(sourceName, "OpenTelemetry.Instrumentation.AspNetCore", StringComparison.Ordinal)))
             {
                 instrumentations |= DistroInstrumentation.AspNetCore;
             }
 
             if (IsCandidate(candidates, DistroInstrumentation.HttpClient)
-                && sourceName.StartsWith("System.Net.Http", StringComparison.Ordinal))
+                && (sourceName.StartsWith("System.Net.Http", StringComparison.Ordinal)
+                    || string.Equals(sourceName, "OpenTelemetry.Instrumentation.Http.HttpClient", StringComparison.Ordinal)
+                    || string.Equals(sourceName, "OpenTelemetry.Instrumentation.Http.HttpWebRequest", StringComparison.Ordinal)))
             {
                 instrumentations |= DistroInstrumentation.HttpClient;
             }

@@ -44,6 +44,30 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.True(processor.HasRemainingInstrumentations);
         }
 
+        [Theory]
+        [InlineData("OpenTelemetry.Instrumentation.AspNetCore", 1UL << 1, true)]
+        [InlineData("OpenTelemetry.Instrumentation.AspNetCore", 1UL << 1, false)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpClient", 1UL << 2, true)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpClient", 1UL << 2, false)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpWebRequest", 1UL << 2, true)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpWebRequest", 1UL << 2, false)]
+        public void OnEnd_OnlyReportsEnabledLegacyInstrumentations(
+            string sourceName,
+            ulong instrumentation,
+            bool enabled)
+        {
+            var expected = enabled
+                ? (DistroInstrumentation)instrumentation
+                : DistroInstrumentation.None;
+            var processor = new DistroInstrumentationUsageProcessor(
+                DistroInstrumentation.SqlClient | expected);
+
+            ProcessActivity(processor, sourceName);
+
+            Assert.Equal(expected, DistroSdkStatsUsage.Instrumentations);
+            Assert.True(processor.HasRemainingInstrumentations);
+        }
+
         [Fact]
         public void OnEnd_TracksCompletedActivitiesAndSkipsDuplicates()
         {
@@ -260,8 +284,12 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
         [Theory]
         [InlineData("Azure.Core.Http", 1UL << 0)]
+        [InlineData("Microsoft.AspNetCore", 1UL << 1)]
         [InlineData("Microsoft.AspNetCore.Hosting", 1UL << 1)]
+        [InlineData("OpenTelemetry.Instrumentation.AspNetCore", 1UL << 1)]
         [InlineData("System.Net.Http", 1UL << 2)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpClient", 1UL << 2)]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpWebRequest", 1UL << 2)]
         [InlineData("OpenTelemetry.Instrumentation.SqlClient", 1UL << 3)]
         [InlineData("Microsoft.Data.SqlClient", 1UL << 3)]
         [InlineData("System.Data.SqlClient", 1UL << 3)]
@@ -288,6 +316,9 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         [InlineData("Microsoft.Extensions.AI")]
         [InlineData("Experimental.Microsoft.Agents")]
         [InlineData("Customer.System.Net.Http")]
+        [InlineData("OpenTelemetry.Instrumentation.AspNetCore.Extensions")]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpClient.Extensions")]
+        [InlineData("OpenTelemetry.Instrumentation.Http.HttpWebRequest.Extensions")]
         [InlineData("Agent365Sdk.Extensions")]
         public void GetInstrumentations_IgnoresNonmatchingAndExporterOwnedNames(
             string sourceName)

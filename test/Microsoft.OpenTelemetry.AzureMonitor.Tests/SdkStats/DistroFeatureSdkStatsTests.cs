@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Threading;
@@ -10,6 +11,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
 using Xunit;
 
 namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
@@ -326,8 +329,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                 distroVersion: "9.9.9-agent-framework");
             DistroFeatureSdkStats.Initialize(snapshot);
 
-            // Simulate collection between the processor's correlated instrumentation and
-            // feature updates. The payload must still keep the two SDKStats types consistent.
+            // The existing processor writes only the instrumentation mask.
             DistroSdkStatsUsage.MarkInstrumentationInUse(DistroInstrumentation.AgentFramework);
 
             var measurements = CollectObservableMeasurements();
@@ -357,8 +359,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                 distroVersion: "9.9.9-agent-framework");
             DistroFeatureSdkStats.Initialize(snapshot);
 
-            // Simulate the reverse collection interleaving: old instrumentation was read
-            // before the correlated feature write became visible.
+            // A standalone feature flag must not bypass instrumentation detection.
             DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
 
             var measurement = Assert.Single(CollectObservableMeasurements());
@@ -387,6 +388,69 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal(
                 DistroInstrumentation.HttpClient | DistroInstrumentation.SqlClient,
                 DistroSdkStatsUsage.Instrumentations);
+        }
+
+        [Theory]
+        [InlineData("Experimental.Microsoft.Agents.AI.Agent", true, 1UL << 6)]
+        [InlineData("Experimental.Microsoft.Agents.AI.Agent", false, 0UL)]
+        [InlineData("Experimental.Microsoft.Extensions.AI", true, 1UL << 4)]
+        public void Observe_CompletedActivitiesDetermineAgentFrameworkFeature(
+            string sourceName,
+            bool enableAgentFramework,
+            ulong expectedInstrumentation)
+        {
+            var snapshot = DistroFeatureSnapshot.CreateForTesting(
+                DistroFeature.Distro,
+                customerInstrumentationKey: "N/A",
+                distroVersion: "9.9.9-processor");
+            DistroFeatureSdkStats.Initialize(snapshot);
+            var enabled = DistroInstrumentation.OpenAI;
+            if (enableAgentFramework)
+            {
+                enabled |= DistroInstrumentation.AgentFramework;
+            }
+
+            var processor = new DistroInstrumentationUsageProcessor(enabled);
+            using var provider = Sdk.CreateTracerProviderBuilder()
+                .AddSource(sourceName)
+                .AddProcessor(processor)
+                .Build();
+            using var source = new ActivitySource(sourceName);
+
+            var initial = Assert.Single(CollectObservableMeasurements());
+            Assert.Equal((long)DistroFeature.Distro, initial.tags["feature"]);
+            Assert.Equal(DistroInstrumentation.None, DistroSdkStatsUsage.Instrumentations);
+
+            using (var activity = source.StartActivity("test"))
+            {
+                Assert.NotNull(activity);
+                Assert.Equal(DistroInstrumentation.None, DistroSdkStatsUsage.Instrumentations);
+            }
+
+            Assert.Equal(
+                (DistroInstrumentation)expectedInstrumentation,
+                DistroSdkStatsUsage.Instrumentations);
+            Assert.Equal(DistroFeature.None, DistroSdkStatsUsage.Features);
+            Assert.Empty(CollectObservableMeasurements());
+
+            MakeNextCollectionEligible();
+            var measurements = CollectObservableMeasurements();
+            var feature = Assert.Single(
+                measurements, measurement => (int)measurement.tags["type"]! == 0);
+            var expectedFeatures = DistroFeature.Distro;
+            if (((DistroInstrumentation)expectedInstrumentation & DistroInstrumentation.AgentFramework) != 0)
+            {
+                expectedFeatures |= DistroFeature.AgentFramework;
+            }
+
+            Assert.Equal((long)expectedFeatures, feature.tags["feature"]);
+            Assert.Equal(expectedInstrumentation == 0 ? 1 : 2, measurements.Count);
+            if (expectedInstrumentation != 0)
+            {
+                var instrumentation = Assert.Single(
+                    measurements, measurement => (int)measurement.tags["type"]! == 1);
+                Assert.Equal((long)expectedInstrumentation, instrumentation.tags["feature"]);
+            }
         }
 
         [Fact]

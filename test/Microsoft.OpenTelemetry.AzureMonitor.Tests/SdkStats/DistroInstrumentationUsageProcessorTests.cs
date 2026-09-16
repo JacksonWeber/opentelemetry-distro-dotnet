@@ -3,11 +3,13 @@
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenTelemetry.AzureMonitor.SdkStats;
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Xunit;
 
@@ -213,6 +215,10 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             using var serviceProvider = services.BuildServiceProvider();
             _ = serviceProvider.GetRequiredService<TracerProvider>();
+            _ = serviceProvider.GetRequiredService<MeterProvider>();
+
+            using var meter = new Meter(SourceName);
+            meter.CreateCounter<long>("commands").Add(1);
 
             using var source = new ActivitySource(SourceName);
             using (var activity = source.StartActivity("test"))

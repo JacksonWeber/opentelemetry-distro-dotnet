@@ -330,7 +330,12 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         // when AzureMonitor is selected) and after the AppContext switch above is set (so
         // SDK Stats routes to the distro-owned ingestion endpoint).
         SdkStatsPin.EnsureIfApplicable(exporters);
-        RegisterDistroFeatureSdkStats(builder.Services, options, exporters, a365OnlyMode);
+        RegisterDistroFeatureSdkStats(
+            builder.Services,
+            options,
+            effectiveInstrumentation,
+            exporters,
+            a365OnlyMode);
 
         return builder;
     }
@@ -348,6 +353,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
     private static void RegisterDistroFeatureSdkStats(
         IServiceCollection services,
         MicrosoftOpenTelemetryOptions options,
+        InstrumentationOptions instrumentationOptions,
         ExportTarget effectiveExporters,
         bool a365OnlyMode)
     {
@@ -386,6 +392,17 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
         {
             AzureMonitorAspNetCoreEventSource.Log.DistroFeatureSdkStatsDisabledByEnvVar();
             return;
+        }
+
+        var enabledInstrumentations =
+            DistroInstrumentationUsageProcessor.GetEnabledInstrumentations(instrumentationOptions);
+
+        if (instrumentationOptions.EnableTracing
+            && enabledInstrumentations != DistroInstrumentation.None)
+        {
+            services.ConfigureOpenTelemetryTracerProvider((_, tracing) =>
+                tracing.AddProcessor(
+                    new DistroInstrumentationUsageProcessor(enabledInstrumentations)));
         }
 
         // Defer snapshot construction until the MeterProvider builds: by then the exporter's

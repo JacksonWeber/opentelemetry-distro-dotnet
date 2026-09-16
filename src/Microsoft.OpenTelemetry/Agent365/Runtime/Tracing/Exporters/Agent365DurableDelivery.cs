@@ -14,8 +14,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Testable factory that assembles the durable store-and-forward pieces an exporter owns for its
     /// lifetime: the shared persistent store and the background replay coordinator that drains it. The
     /// same store instance is injected into the live <see cref="Agent365ExporterCore"/> (so failed/deferred
-    /// live sends and replay passes operate on one queue) and, together with the core's gate, wired into
-    /// the coordinator.
+    /// live sends and replay passes operate on one queue) and, together with the core's transmission
+    /// coordination state, wired into the coordinator.
     /// <para>
     /// When offline storage is disabled — either explicitly via
     /// <see cref="Agent365ExporterOptions.DisableOfflineStorage"/> or implicitly because storage
@@ -62,7 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Creates the background replay coordinator wired to the core's shared store and gate and to
+        /// Creates the background replay coordinator wired to the core's shared store and tenant gate registry and to
         /// <see cref="Agent365ExporterCore.ReplayRecordAsync"/> with a cancellation-aware HTTP send.
         /// Returns <c>null</c> when the core's store is a <see cref="DisabledAgent365Storage"/> (offline
         /// storage disabled or unavailable), because there is nothing to replay.
@@ -95,7 +95,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             return new Agent365ReplayCoordinator(
                 storage,
-                core.Gate,
+                core.Gates,
                 replayAsync: (record, ct) => core.ReplayRecordAsync(record, options, tokenResolver, sendAsync, ct),
                 logger);
         }

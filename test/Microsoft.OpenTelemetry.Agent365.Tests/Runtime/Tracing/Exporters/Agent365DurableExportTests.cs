@@ -478,6 +478,84 @@ public sealed class Agent365DurableExportTests
     }
 
     [TestMethod]
+    public async Task RetryableFailureForOneTenantDoesNotBlockAnotherTenant()
+    {
+        var storage = new FakeStorage();
+        var tenantASends = 0;
+        var tenantBSends = 0;
+
+        var result = await ExportActivitiesAsync(
+            CreateCore(storage: storage),
+            new[]
+            {
+                CreateActivity(tenantId: "tenant-a"),
+                CreateActivity(tenantId: "tenant-b"),
+            },
+            request =>
+            {
+                var uri = request.RequestUri!.ToString();
+                if (uri.Contains("tenants/tenant-a/"))
+                {
+                    tenantASends++;
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+                }
+
+                tenantBSends++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            });
+
+        result.Should().Be(ExportResult.Success);
+        tenantASends.Should().Be(1);
+        tenantBSends.Should().Be(1);
+        storage.Records.Should().ContainSingle();
+        storage.Records[0].TenantId.Should().Be("tenant-a");
+    }
+
+    [TestMethod]
+    public async Task LiveRetryableFailureBacksOffReplayForSameTenantThroughSharedRegistry()
+    {
+        // One core, one real (non-overridden) tenant gate registry: a live 503 for tenant A must be
+        // visible to a replay coordinator built from the SAME core.Gates registry, proving live and
+        // replay coordinate through the exact same per-tenant gate rather than independent state.
+        var storage = new FakeStorage();
+        var core = CreateCore(storage: storage);
+
+        var liveResult = await ExportOneAsync(
+            core,
+            sendAsync: _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)),
+            activity: CreateActivity(tenantId: "tenant-a"));
+
+        liveResult.Should().Be(ExportResult.Success, "the retryable live failure hands the chunk to durable storage");
+        storage.Records.Should().ContainSingle();
+        storage.Records[0].TenantId.Should().Be("tenant-a");
+
+        var storedRecord = FakeStoredRecord.From(storage.Records[0]);
+        var replayStorage = new FakeStorage(storedRecord);
+        var replaySends = 0;
+        var coordinator = new Agent365ReplayCoordinator(
+            replayStorage,
+            core.Gates,
+            replayAsync: (record, ct) => core.ReplayRecordAsync(
+                record,
+                new Agent365ExporterOptions { DomainResolver = _ => "api.example.com" },
+                tokenResolver: (_, _) => Task.FromResult<string?>("replay-token"),
+                sendAsync: (_, _) =>
+                {
+                    replaySends++;
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+                },
+                ct),
+            NullLogger.Instance);
+
+        await coordinator.ReplayOnceAsync(CancellationToken.None);
+
+        replaySends.Should().Be(
+            0, "tenant A's gate is already in backoff from the live send, so replay must not attempt HTTP");
+        storedRecord.DeleteCalls.Should().Be(
+            0, "the record stays retained while the shared registry's tenant A gate is in backoff");
+    }
+
+    [TestMethod]
     public async Task PermanentFirstChunkStopsRemainingChunksForThatIdentity()
     {
         // Three same-identity chunks; the first send is a permanent 403. Later chunks for the same
@@ -564,6 +642,50 @@ public sealed class Agent365DurableExportTests
         result.Should().Be(ExportResult.Failure);
         storage.Records.Should().ContainSingle();
         storage.Records[0].AgentId.Should().Be("agent-ok");
+    }
+
+    [TestMethod]
+    public async Task MalformedWhitespaceTenantGroupDoesNotPreventLaterValidTenantGroupFromSending()
+    {
+        // ExportBatchCoreAsync is internal and can be called directly with a caller-constructed groups
+        // list that bypasses PartitionByIdentity's own filtering. A whitespace-only tenant id reaching
+        // the gate registry's Acquire(...) would throw ArgumentException; that must be handled
+        // defensively as a per-group permanent failure rather than propagating out of the whole batch
+        // and discarding a later, valid tenant group.
+        var storage = new FakeStorage();
+        var okSends = 0;
+        var core = CreateCore(storage: storage);
+        using var malformedActivity = CreateActivity(tenantId: "  ", agentId: "agent-malformed");
+        using var okActivity = CreateActivity(tenantId: "tenant-ok", agentId: "agent-ok");
+
+        var groups = new List<(string TenantId, string AgentId, List<Activity> Activities)>
+        {
+            ("   ", "agent-malformed", new List<Activity> { malformedActivity }),
+            ("tenant-ok", "agent-ok", new List<Activity> { okActivity }),
+        };
+
+        var options = new Agent365ExporterOptions
+        {
+            DomainResolver = _ => "api.example.com",
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+        };
+
+        Func<Task<ExportResult>> act = () => core.ExportBatchCoreAsync(
+            groups: groups,
+            resource: ResourceBuilder.CreateEmpty().Build(),
+            options: options,
+            tokenResolver: (_, _) => Task.FromResult<string?>("test-token"),
+            sendAsync: _ =>
+            {
+                okSends++;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            },
+            cancellationToken: CancellationToken.None);
+
+        var result = await act.Should().NotThrowAsync();
+        result.Which.Should().Be(ExportResult.Failure, "the malformed group is a permanent failure for the batch");
+        okSends.Should().Be(1, "the later valid tenant group must still be sent");
+        storage.Records.Should().BeEmpty("neither group persists: the malformed one is rejected, the valid one is delivered");
     }
 
     [TestMethod]

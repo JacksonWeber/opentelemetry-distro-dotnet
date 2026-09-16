@@ -82,8 +82,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             // Create the shared durable store honoring the options — a no-op store when offline storage
             // is disabled or its initialization fails — and hand it, together with the core, to the
             // durable-delivery builder below. The builder injects the store into the core so the live
-            // persist path and the background replay drain operate on one queue and one transmission
-            // gate, wires each exporter with wireDurableDelivery: true (so it builds and starts its
+            // persist path and the background replay drain operate on one queue and shared transmission
+            // coordination state, wires each exporter with wireDurableDelivery: true (so it builds and starts its
             // replay coordinator from that shared store, or skips it when the store is disabled), and
             // disposes the eagerly created store if exporter/processor construction throws.
             var storage = Agent365DurableDelivery.CreateStorage(exporterOptions, coreLogger);

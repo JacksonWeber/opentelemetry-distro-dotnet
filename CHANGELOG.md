@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.10.0-beta.1.
+- Add a console sample that routes traces, logs, and metrics to multiple Application Insights endpoints.
 - Isolate Agent365 exporter failures by tenant ([#158](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/158))
 - Support tracing A2A via execute tool span.
 - Add a self-contained Agent365 service-to-service sample that uses app-only MSAL authentication and emits manual Invoke Agent, Inference, and Execute Tool spans without the Agents Framework ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))

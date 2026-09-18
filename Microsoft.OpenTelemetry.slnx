@@ -7,5 +7,6 @@
   <Project Path="test/Microsoft.OpenTelemetry.AzureMonitor.Tests/Microsoft.OpenTelemetry.AzureMonitor.Tests.csproj" />
   <Project Path="examples/Microsoft.OpenTelemetry.Console.Demo/Microsoft.OpenTelemetry.Console.Demo.csproj" />
   <Project Path="examples/Microsoft.OpenTelemetry.MultiEndpoint.Console.Demo/Microsoft.OpenTelemetry.MultiEndpoint.Console.Demo.csproj" />
+  <Project Path="examples/Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo/Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo.csproj" />
   <Project Path="src/Microsoft.OpenTelemetry/Microsoft.OpenTelemetry.csproj" />
 </Solution>

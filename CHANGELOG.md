@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add an ASP.NET Core sample that routes each customer's traces, logs, and metrics to that customer's Application Insights component, including the ASP.NET Core and HttpClient request-duration metrics.
 - Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.10.0-beta.1.
 - Add a console sample that routes traces, logs, and metrics to multiple Application Insights endpoints.
 - Isolate Agent365 exporter failures by tenant ([#158](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/158))

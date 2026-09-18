@@ -295,6 +295,7 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 - [Agent365 S2S Observability Sample](examples/Microsoft.OpenTelemetry.Agent365.S2S.Demo/README.md)
 - [Microsoft.OpenTelemetry.AgentFramework.Demo](examples/Microsoft.OpenTelemetry.AgentFramework.Demo) — Agent Framework → OTLP / Azure Monitor
 - [Microsoft.OpenTelemetry.Fabric.Demo](examples/Microsoft.OpenTelemetry.Fabric.Demo) — ASP.NET Core → OTLP → OTel Collector → Microsoft Fabric / Azure Data Explorer
+- [Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo](examples/Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo) — ASP.NET Core → one Application Insights component per customer
 
 ## AI-Assisted Setup & Migration Skills
 

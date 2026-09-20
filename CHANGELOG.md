@@ -3,17 +3,22 @@
 ## Unreleased
 
 - Report Live Metrics usage in Feature SDK Stats only when active-collection requests are sent, and correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor. Runtime feature detection adds no locks or custom listeners; updates are emitted at the next scheduled long-interval export.
+
+## 1.2.0-beta.1 - 2026-09-18
+- Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.10.0-beta.1, which makes multi-endpoint routing available: one exporter can send telemetry to several Application Insights components. It is off by default and enabled with the `Azure.Monitor.OpenTelemetry.EnableMultiEndpointRouting` switch, after which each item is sent to the component named by its `microsoft.instrumentation_key` and `microsoft.ingestion_endpoint` attributes, and an item carrying neither is dropped rather than sent to the application's own component.
+- Add an ASP.NET Core sample that routes each customer's traces, logs, and metrics to that customer's Application Insights component, including the ASP.NET Core and HttpClient request-duration metrics.
+- Add a console sample that routes traces, logs, and metrics to multiple Application Insights endpoints.
 - Isolate Agent365 exporter failures by tenant ([#158](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/158))
 - Support tracing A2A via execute tool span.
 - Add a self-contained Agent365 service-to-service sample that uses app-only MSAL authentication and emits manual Invoke Agent, Inference, and Execute Tool spans without the Agents Framework ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))
 - Log successful Agent365 export responses with the HTTP status code and correlation ID ([#155](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/155))
+- Report enabled distro trace instrumentations in SDK Stats when they produce a completed activity during a bounded 10-minute startup window, including legacy HTTP and ASP.NET Core activity sources ([#146](https://github.com/microsoft/opentelemetry-distro-dotnet/pull/146))
 
 ## 1.1.0 - 2026-09-08
 
 - InvokeAgentScope now defaults omitted span kind to ActivityKind.Internal while preserving explicit overrides.
 - Add extensible, dictionary-backed JSON schema models for `gen_ai.tool.call.arguments` and `gen_ai.tool.call.result`, including `schema_version` on both payloads and typed Execute Tool span and ETW APIs.
 - Add a thread-safe SDK Stats usage foundation that independently emits feature (`type=0`) and instrumentation (`type=1`) masks at the next scheduled long-interval export.
-- Report enabled distro trace instrumentations in SDK Stats when they produce a completed activity during a bounded 10-minute startup window, including legacy HTTP and ASP.NET Core activity sources.
 - Shift Microsoft distro Feature SDK Stats flags to bits 8–21, reserving bits 0–7 for existing .NET `Track*` feature mappings and preventing backend bitmap conflicts.
 - Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.9.0.
 - Update `OpenTelemetry`, `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Http`, `OpenTelemetry.Instrumentation.SqlClient`, `OpenTelemetry.Exporter.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, and `OpenTelemetry.Exporter.InMemory` to 1.18.0, and `OpenTelemetry.PersistentStorage.FileSystem` to 1.1.1. Updates `Agent365PersistentStorage.TryStore` to bind to the non-obsolete `TryCreateBlob(ReadOnlySpan<byte>, ...)` overload required by the `PersistentStorage.FileSystem` 1.1.1 API.

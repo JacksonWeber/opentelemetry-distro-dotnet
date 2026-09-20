@@ -280,6 +280,7 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 ## Documentation
 
 - [Azure Monitor Getting Started](docs/azure-monitor-getting-started.md) — Send traces, metrics, and logs to Application Insights
+- [Multi-Endpoint Routing](docs/multi-endpoint-routing.md) — Route telemetry to several Application Insights components from one application (preview)
 - [Agent Framework Getting Started](docs/agent-framework-getting-started.md) — Instrument Agent Framework agents with Azure Monitor and OTLP
 - [Customization Guide](docs/customization.md) — Resource configuration, enrichment, filtering, and OTLP exporter tuning
 - [Agent 365 Getting Started](docs/agent365-getting-started.md) — Add Agent365 observability using the distro
@@ -295,6 +296,8 @@ builder.Services.AddLogging(logging => logging.AddConsole());
 - [Agent365 S2S Observability Sample](examples/Microsoft.OpenTelemetry.Agent365.S2S.Demo/README.md)
 - [Microsoft.OpenTelemetry.AgentFramework.Demo](examples/Microsoft.OpenTelemetry.AgentFramework.Demo) — Agent Framework → OTLP / Azure Monitor
 - [Microsoft.OpenTelemetry.Fabric.Demo](examples/Microsoft.OpenTelemetry.Fabric.Demo) — ASP.NET Core → OTLP → OTel Collector → Microsoft Fabric / Azure Data Explorer
+- [Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo](examples/Microsoft.OpenTelemetry.MultiEndpoint.AspNetCore.Demo) — ASP.NET Core → one Application Insights component per customer
+- [Microsoft.OpenTelemetry.MultiEndpoint.Console.Demo](examples/Microsoft.OpenTelemetry.MultiEndpoint.Console.Demo) — Console app → two Application Insights components
 
 ## AI-Assisted Setup & Migration Skills
 

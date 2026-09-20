@@ -192,6 +192,10 @@ Configure Azure Monitor behavior via `o.AzureMonitor`:
 | `DisableOfflineStorage` | `bool` | Disable offline storage for telemetry. | `false` |
 | `StorageDirectory` | `string?` | Override the default directory for offline storage. | `null` |
 
+> **Sending to more than one Application Insights component?** A single application can route each
+> telemetry item to a different component. See [Multi-Endpoint Routing](multi-endpoint-routing.md)
+> (preview). Several of the options above behave differently while routing is enabled.
+
 ### Instrumentation options
 
 Control which auto-instrumentation libraries are enabled via `o.Instrumentation`. All default to `true`:

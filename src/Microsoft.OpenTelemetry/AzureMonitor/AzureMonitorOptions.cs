@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Runtime.Serialization;
-using System.Reflection;
 using Azure.Core;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Monitor.OpenTelemetry.LiveMetrics;
@@ -16,12 +15,8 @@ namespace Microsoft.OpenTelemetry
     /// </summary>
     public class AzureMonitorOptions : ClientOptions
     {
-        private static readonly PropertyInfo? IsCustomTransportSetProperty =
-            typeof(ClientOptions).GetProperty(
-                "IsCustomTransportSet",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-
         private readonly HttpPipelineTransport _inheritedTransport;
+        private bool _transportSetterWasCalled;
 
         /// <summary>
         /// The Connection String provides users with a single configuration setting to identify the Azure Monitor resource and endpoint.
@@ -97,22 +92,32 @@ namespace Microsoft.OpenTelemetry
         public string? StorageDirectory { get; set; }
 
         /// <summary>
+        /// Gets or sets the transport used to send HTTP requests.
+        /// </summary>
+        /// <remarks>
+        /// An explicitly assigned transport takes precedence over the exporter transport,
+        /// even when assigning the inherited default transport.
+        /// </remarks>
+        public new HttpPipelineTransport Transport
+        {
+            get => base.Transport;
+            set
+            {
+                base.Transport = value;
+                _transportSetterWasCalled = true;
+            }
+        }
+
+        /// <summary>
         /// When true, skips exporter registration. Instrumentation is still added.
         /// Used internally by <see cref="MicrosoftOpenTelemetryBuilderExtensions.UseMicrosoftOpenTelemetry"/>.
         /// </summary>
         internal bool SkipExporter { get; set; }
 
-        internal HttpPipelineTransport? ExplicitTransport
-        {
-            get
-            {
-                bool setterWasCalled =
-                    IsCustomTransportSetProperty?.GetValue(this) is true;
-                return setterWasCalled || !ReferenceEquals(Transport, _inheritedTransport)
-                    ? Transport
-                    : null;
-            }
-        }
+        internal HttpPipelineTransport? ExplicitTransport =>
+            _transportSetterWasCalled || !ReferenceEquals(Transport, _inheritedTransport)
+                ? Transport
+                : null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AzureMonitorOptions"/>.

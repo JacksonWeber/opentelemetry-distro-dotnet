@@ -198,17 +198,24 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Same(configuredTransport, trackingTransport.InnerTransport);
         }
 
-        [Fact]
-        public void AzureMonitorOptions_ExplicitTransportOverridesPreconfiguredExporterTransport()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AzureMonitorOptions_ExplicitTransportOverridesPreconfiguredExporterTransport(bool useBaseOptions)
         {
             using var optionsTransport = new Azure.Core.Pipeline.HttpClientTransport(
                 new System.Net.Http.HttpClient());
             using var exporterTransport = new Azure.Core.Pipeline.HttpClientTransport(
                 new System.Net.Http.HttpClient());
-            var options = new AzureMonitorOptions
+            var options = new AzureMonitorOptions();
+            if (useBaseOptions)
             {
-                Transport = optionsTransport,
-            };
+                ((Azure.Core.ClientOptions)options).Transport = optionsTransport;
+            }
+            else
+            {
+                options.Transport = optionsTransport;
+            }
             var exporterOptions =
                 new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
                 {
@@ -276,8 +283,10 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             }
         }
 
-        [Fact]
-        public void UseMicrosoftOpenTelemetry_PropagatesExplicitAzureMonitorTransport()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void UseMicrosoftOpenTelemetry_PropagatesExplicitAzureMonitorTransport(bool useBaseOptions)
         {
             using var configuredTransport = new Azure.Core.Pipeline.HttpClientTransport(
                 new System.Net.Http.HttpClient());
@@ -286,7 +295,14 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             {
                 options.Exporters = ExportTarget.AzureMonitor;
                 options.AzureMonitor.ConnectionString = ValidConnectionString;
-                options.AzureMonitor.Transport = configuredTransport;
+                if (useBaseOptions)
+                {
+                    ((Azure.Core.ClientOptions)options.AzureMonitor).Transport = configuredTransport;
+                }
+                else
+                {
+                    options.AzureMonitor.Transport = configuredTransport;
+                }
             });
 
             using var serviceProvider = services.BuildServiceProvider();

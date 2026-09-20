@@ -7,6 +7,8 @@ Microsoft.OpenTelemetry.Agent365Options.DisableOfflineStorage.get -> bool
 Microsoft.OpenTelemetry.Agent365Options.DisableOfflineStorage.set -> void
 Microsoft.OpenTelemetry.Agent365Options.StorageDirectory.get -> string?
 Microsoft.OpenTelemetry.Agent365Options.StorageDirectory.set -> void
+Microsoft.OpenTelemetry.AzureMonitorOptions.Transport.get -> Azure.Core.Pipeline.HttpPipelineTransport!
+Microsoft.OpenTelemetry.AzureMonitorOptions.Transport.set -> void
 override Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterAsync.Dispose() -> void
 override Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterAsync.ShutdownAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 override Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors.BatchActivityExportProcessorAsync.OnForceFlush(int timeoutMilliseconds) -> bool

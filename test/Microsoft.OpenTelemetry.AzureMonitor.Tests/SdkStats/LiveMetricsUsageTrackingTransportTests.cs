@@ -79,6 +79,50 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal(DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
         }
 
+        [Theory]
+        [InlineData(TaskStatus.RanToCompletion)]
+        [InlineData(TaskStatus.Faulted)]
+        [InlineData(TaskStatus.Canceled)]
+        public async Task ProcessAsync_ReturnsInnerValueTask(TaskStatus completionStatus)
+        {
+            DistroSdkStatsUsage.ResetForTesting();
+            var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var inner = new RecordingTransport { AsyncResult = new ValueTask(completion.Task) };
+            var transport = new LiveMetricsUsageTrackingTransport(inner);
+            using var message = new HttpMessage(
+                transport.CreateRequest(), new ResponseClassifier());
+            message.Request.Method = RequestMethod.Post;
+            message.Request.Uri.Reset(new Uri("https://example.test/QuickPulseService.svc/post"));
+
+            var result = transport.ProcessAsync(message);
+
+            Assert.Equal(inner.AsyncResult, result);
+            Assert.False(result.IsCompleted);
+            Assert.Same(message, inner.LastMessage);
+            Assert.Equal(1, inner.AsyncCalls);
+            Assert.Equal(DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
+
+            switch (completionStatus)
+            {
+                case TaskStatus.RanToCompletion:
+                    completion.SetResult(null);
+                    await result;
+                    break;
+                case TaskStatus.Faulted:
+                    var failure = new InvalidOperationException("Transport failed asynchronously.");
+                    completion.SetException(failure);
+                    var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => result.AsTask());
+                    Assert.Same(failure, actual);
+                    break;
+                case TaskStatus.Canceled:
+                    completion.SetCanceled();
+                    await Assert.ThrowsAsync<TaskCanceledException>(() => result.AsTask());
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(completionStatus));
+            }
+        }
+
         private sealed class RecordingTransport : HttpPipelineTransport
         {
             internal HttpMessage? LastMessage { get; private set; }
@@ -88,6 +132,8 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             internal int AsyncCalls { get; private set; }
 
             internal Exception? Failure { get; set; }
+
+            internal ValueTask AsyncResult { get; set; }
 
             public override Request CreateRequest() => HttpClientTransport.Shared.CreateRequest();
 
@@ -101,7 +147,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             {
                 AsyncCalls++;
                 Record(message);
-                return default;
+                return AsyncResult;
             }
 
             private void Record(HttpMessage message)

@@ -34,11 +34,11 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
             _inner.Process(message);
         }
 
-        public override async ValueTask ProcessAsync(HttpMessage message)
+        public override ValueTask ProcessAsync(HttpMessage message)
         {
             var uri = message.Request.Uri.ToUri();
             TrackRequest(message.Request.Method, uri);
-            await _inner.ProcessAsync(message).ConfigureAwait(false);
+            return _inner.ProcessAsync(message);
         }
 
         public override void Update(HttpPipelineTransportOptions options) => _inner.Update(options);

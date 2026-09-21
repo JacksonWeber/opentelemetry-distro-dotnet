@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Threading;
@@ -203,6 +204,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         public void Builder_DoesNotRegisterDetectionWhenTracingIsDisabled()
         {
             const string SourceName = "Microsoft.Data.SqlClient.Tests.TracingDisabled";
+            var exportedMetrics = new List<Metric>();
             var services = new ServiceCollection();
             services.AddOpenTelemetry()
                 .UseMicrosoftOpenTelemetry(options =>
@@ -211,14 +213,31 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                     options.Instrumentation.EnableTracing = false;
                     options.Instrumentation.EnableMetrics = true;
                 })
-                .WithTracing(tracing => tracing.AddSource(SourceName));
+                .WithTracing(tracing => tracing.AddSource(SourceName))
+                .WithMetrics(metrics => metrics
+                    .AddMeter(SourceName)
+                    .AddInMemoryExporter(exportedMetrics));
 
             using var serviceProvider = services.BuildServiceProvider();
             _ = serviceProvider.GetRequiredService<TracerProvider>();
-            _ = serviceProvider.GetRequiredService<MeterProvider>();
+            var meterProvider = serviceProvider.GetRequiredService<MeterProvider>();
 
             using var meter = new Meter(SourceName);
-            meter.CreateCounter<long>("commands").Add(1);
+            var counter = meter.CreateCounter<long>("commands");
+            Assert.True(counter.Enabled);
+            counter.Add(1);
+
+            Assert.True(meterProvider.ForceFlush());
+            var metric = Assert.Single(
+                exportedMetrics,
+                metric => metric.MeterName == SourceName && metric.Name == "commands");
+            var points = metric.GetMetricPoints().GetEnumerator();
+            Assert.True(points.MoveNext());
+            Assert.Equal(1, points.Current.GetSumLong());
+            Assert.False(points.MoveNext());
+            Assert.Equal(
+                DistroInstrumentation.None,
+                DistroSdkStatsUsage.Instrumentations);
 
             using var source = new ActivitySource(SourceName);
             using (var activity = source.StartActivity("test"))

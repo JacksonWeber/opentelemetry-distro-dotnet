@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Report Live Metrics usage in Feature SDK Stats only when active-collection requests are sent, and correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor. Runtime feature detection adds no locks or custom listeners; updates are emitted at the next scheduled long-interval export.
+- Report Live Metrics usage in Feature SDK Stats after the first active-collection request and stop inspecting subsequent requests, and correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor.
 
 ## 1.2.0-beta.1 - 2026-09-18
 - Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.10.0-beta.1, which makes multi-endpoint routing available: one exporter can send telemetry to several Application Insights components. It is off by default and enabled with the `Azure.Monitor.OpenTelemetry.EnableMultiEndpointRouting` switch, after which each item is sent to the component named by its `microsoft.instrumentation_key` and `microsoft.ingestion_endpoint` attributes, and an item carrying neither is dropped rather than sent to the application's own component.

@@ -16,7 +16,7 @@ namespace Microsoft.OpenTelemetry
     public class AzureMonitorOptions : ClientOptions
     {
         private readonly HttpPipelineTransport _inheritedTransport;
-        private bool _transportSetterWasCalled;
+        private bool _transportWasSetInternally;
 
         /// <summary>
         /// The Connection String provides users with a single configuration setting to identify the Azure Monitor resource and endpoint.
@@ -92,30 +92,14 @@ namespace Microsoft.OpenTelemetry
         public string? StorageDirectory { get; set; }
 
         /// <summary>
-        /// Gets or sets the transport used to send HTTP requests.
-        /// </summary>
-        /// <remarks>
-        /// An explicitly assigned transport takes precedence over the exporter transport,
-        /// even when assigning the inherited default transport.
-        /// </remarks>
-        public new HttpPipelineTransport Transport
-        {
-            get => base.Transport;
-            set
-            {
-                base.Transport = value;
-                _transportSetterWasCalled = true;
-            }
-        }
-
-        /// <summary>
         /// When true, skips exporter registration. Instrumentation is still added.
         /// Used internally by <see cref="MicrosoftOpenTelemetryBuilderExtensions.UseMicrosoftOpenTelemetry"/>.
         /// </summary>
         internal bool SkipExporter { get; set; }
 
+        // The inherited public setter cannot be intercepted; an unchanged default stays implicit.
         internal HttpPipelineTransport? ExplicitTransport =>
-            _transportSetterWasCalled || !ReferenceEquals(Transport, _inheritedTransport)
+            _transportWasSetInternally || !ReferenceEquals(Transport, _inheritedTransport)
                 ? Transport
                 : null;
 
@@ -128,6 +112,13 @@ namespace Microsoft.OpenTelemetry
             // users can explicitly change it, but by default we don't want internal logs to be reported to Azure Monitor.
             this.Diagnostics.IsDistributedTracingEnabled = false;
             this.Diagnostics.IsLoggingEnabled = false;
+        }
+
+        internal void SetTransport(HttpPipelineTransport transport)
+        {
+            Transport = transport;
+            // Preserve explicit internal copies even when they match this instance's default.
+            _transportWasSetInternally = true;
         }
 
         internal void SetValueToExporterOptions(AzureMonitorExporterOptions exporterOptions)

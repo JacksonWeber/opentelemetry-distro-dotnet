@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Pipeline;
@@ -57,11 +59,65 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Process_PreservesTransportFailures(bool async)
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Process_AfterFirstPost_SkipsInspectionAndContinuesForwarding(
+            bool async,
+            bool useAnotherTransport)
         {
             DistroSdkStatsUsage.ResetForTesting();
+            DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.AgentFramework);
+            var inner = new RecordingTransport();
+            var transport = new LiveMetricsUsageTrackingTransport(inner);
+            var request = new RecordingRequest();
+            using var message = new HttpMessage(request, new ResponseClassifier());
+            request.Method = RequestMethod.Post;
+            request.Uri.Reset(new Uri("https://example.test/QuickPulseService.svc/post"));
+            var uriReadsBeforePost = request.UriReads;
+
+            if (async)
+            {
+                await transport.ProcessAsync(message);
+            }
+            else
+            {
+                transport.Process(message);
+            }
+
+            Assert.True(request.UriReads > uriReadsBeforePost);
+            Assert.Equal(DistroFeature.AgentFramework | DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
+            var uriReadsAfterPost = request.UriReads;
+            if (useAnotherTransport)
+            {
+                transport = new LiveMetricsUsageTrackingTransport(inner);
+            }
+
+            transport.Process(message);
+            await transport.ProcessAsync(message);
+
+            Assert.Equal(uriReadsAfterPost, request.UriReads);
+            Assert.Same(message, inner.LastMessage);
+            Assert.Equal(async ? 1 : 2, inner.SyncCalls);
+            Assert.Equal(async ? 2 : 1, inner.AsyncCalls);
+            Assert.Equal(DistroFeature.AgentFramework | DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
+            Assert.Equal(DistroInstrumentation.None, DistroSdkStatsUsage.Instrumentations);
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task Process_PreservesTransportFailures(bool async, bool liveMetricsAlreadyObserved)
+        {
+            DistroSdkStatsUsage.ResetForTesting();
+            if (liveMetricsAlreadyObserved)
+            {
+                DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.LiveMetrics);
+            }
+
             var failure = new InvalidOperationException("Transport failed.");
             var inner = new RecordingTransport { Failure = failure };
             var transport = new LiveMetricsUsageTrackingTransport(inner);
@@ -121,6 +177,45 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
                 default:
                     throw new ArgumentOutOfRangeException(nameof(completionStatus));
             }
+        }
+
+        private sealed class RecordingRequest : Request
+        {
+            private readonly Request _inner = HttpClientTransport.Shared.CreateRequest();
+
+            internal int UriReads { get; private set; }
+
+            public override RequestUriBuilder Uri
+            {
+                get
+                {
+                    UriReads++;
+                    return _inner.Uri;
+                }
+                set => _inner.Uri = value;
+            }
+
+            public override string ClientRequestId
+            {
+                get => _inner.ClientRequestId;
+                set => _inner.ClientRequestId = value;
+            }
+
+            protected override void AddHeader(string name, string value) => _inner.Headers.Add(name, value);
+
+            protected override bool TryGetHeader(string name, [NotNullWhen(true)] out string? value) =>
+                _inner.Headers.TryGetValue(name, out value);
+
+            protected override bool TryGetHeaderValues(string name, [NotNullWhen(true)] out IEnumerable<string>? values) =>
+                _inner.Headers.TryGetValues(name, out values);
+
+            protected override bool ContainsHeader(string name) => _inner.Headers.Contains(name);
+
+            protected override bool RemoveHeader(string name) => _inner.Headers.Remove(name);
+
+            protected override IEnumerable<HttpHeader> EnumerateHeaders() => _inner.Headers;
+
+            public override void Dispose() => _inner.Dispose();
         }
 
         private sealed class RecordingTransport : HttpPipelineTransport

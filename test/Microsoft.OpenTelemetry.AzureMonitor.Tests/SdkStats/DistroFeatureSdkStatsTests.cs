@@ -268,13 +268,22 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             }
         }
 
-        [Fact]
-        public void AzureMonitorOptions_TracksExplicitAssignmentOfInheritedTransport()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AzureMonitorOptions_DefaultTransportAssignment_OnlyTracksInternalCopies(bool useInternalSetter)
         {
             var originalDefault = Azure.Core.ClientOptions.Default.Transport;
             var options = new AzureMonitorOptions();
             var explicitlyAssignedTransport = options.Transport;
-            options.Transport = explicitlyAssignedTransport;
+            if (useInternalSetter)
+            {
+                options.SetTransport(explicitlyAssignedTransport);
+            }
+            else
+            {
+                options.Transport = explicitlyAssignedTransport;
+            }
             using var newDefault = new Azure.Core.Pipeline.HttpClientTransport(
                 new System.Net.Http.HttpClient());
 
@@ -288,7 +297,9 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
                 var trackingTransport =
                     Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
-                Assert.Same(explicitlyAssignedTransport, trackingTransport.InnerTransport);
+                Assert.Same(
+                    useInternalSetter ? explicitlyAssignedTransport : newDefault,
+                    trackingTransport.InnerTransport);
             }
             finally
             {
@@ -326,6 +337,43 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             var trackingTransport =
                 Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
             Assert.Same(configuredTransport, trackingTransport.InnerTransport);
+        }
+
+        [Fact]
+        public void UseMicrosoftOpenTelemetry_PreservesExplicitTransportWhenItBecomesTheGlobalDefault()
+        {
+            var originalDefault = Azure.Core.ClientOptions.Default.Transport;
+            using var configuredTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            using var exporterTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+
+            try
+            {
+                var services = new ServiceCollection();
+                services.Configure<Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions>(
+                    options => options.Transport = exporterTransport);
+                services.AddOpenTelemetry().UseMicrosoftOpenTelemetry(options =>
+                {
+                    options.Exporters = ExportTarget.AzureMonitor;
+                    options.AzureMonitor.ConnectionString = ValidConnectionString;
+                    options.AzureMonitor.Transport = configuredTransport;
+                    Azure.Core.ClientOptions.Default.Transport = configuredTransport;
+                });
+
+                using var serviceProvider = services.BuildServiceProvider();
+                var exporterOptions = serviceProvider
+                    .GetRequiredService<IOptionsMonitor<Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions>>()
+                    .CurrentValue;
+
+                var trackingTransport =
+                    Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+                Assert.Same(configuredTransport, trackingTransport.InnerTransport);
+            }
+            finally
+            {
+                Azure.Core.ClientOptions.Default.Transport = originalDefault;
+            }
         }
 
         [Fact]

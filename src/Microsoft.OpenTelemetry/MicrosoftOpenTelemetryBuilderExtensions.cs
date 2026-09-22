@@ -188,7 +188,7 @@ public static class MicrosoftOpenTelemetryBuilderExtensions
             o.TracesPerSecond = options.AzureMonitor.TracesPerSecond;
             if (options.AzureMonitor.ExplicitTransport is { } transport)
             {
-                o.Transport = transport;
+                o.SetTransport(transport);
             }
         }, effectiveInstrumentation);
 

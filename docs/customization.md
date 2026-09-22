@@ -275,6 +275,29 @@ builder.Services.AddOpenTelemetry()
     });
 ```
 
+### HTTP client metrics
+
+When HTTP client instrumentation and metrics are enabled, only `http.client.request.duration` is collected from `System.Net.Http` by default. This retains request latency, count, and failure dimensions while reducing default telemetry volume. `http.client.active_requests`, `http.client.open_connections`, `http.client.connection.duration`, `http.client.request.time_in_queue`, and future instruments from this meter are opt-in. HTTP dependency tracing and server metrics are unchanged.
+
+To collect an additional metric, configure an OpenTelemetry view before the provider is built:
+
+```csharp
+using OpenTelemetry.Metrics;
+
+builder.Services.ConfigureOpenTelemetryMeterProvider(metrics =>
+    metrics.AddView(instrument =>
+        instrument.Meter.Name == "System.Net.Http"
+        && instrument.Name == "http.client.open_connections"
+            ? new MetricStreamConfiguration()
+            : null));
+```
+
+To restore all metrics from this meter, remove the `instrument.Name` condition. This does not enable metrics or instrumentation that you have disabled through `InstrumentationOptions`.
+
+Views are additive: a matching non-drop view collects a metric even when the distro's drop view also matches, regardless of registration order. Existing broad non-drop views can therefore re-enable these metrics. Calling `AddMeter("System.Net.Http")` again does not override the drop view. Views apply to all exporters on the same meter provider, including Azure Monitor and OTLP.
+
+To disable request duration too, use `metrics.AddView("http.client.request.duration", MetricStreamConfiguration.Drop)` without a competing non-drop view. DNS metrics belong to the separate `System.Net.NameResolution` meter. This change does not affect `_APPRESOURCEPREVIEW_` resource-metric emission.
+
 ### Dropping specific metrics instruments
 
 To exclude specific instruments from being collected:

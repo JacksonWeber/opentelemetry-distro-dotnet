@@ -138,7 +138,7 @@ namespace Microsoft.OpenTelemetry
             // relying on exporter internals or changing customer transport behavior.
             var transport =
                 ExplicitTransport ?? exporterOptions.Transport ?? HttpClientTransport.Shared;
-            exporterOptions.Transport = transport is LiveMetricsUsageTrackingTransport
+            exporterOptions.Transport = !EnableLiveMetrics || transport is LiveMetricsUsageTrackingTransport
                 ? transport
                 : new LiveMetricsUsageTrackingTransport(transport);
             exporterOptions.Diagnostics.IsDistributedTracingEnabled = Diagnostics.IsDistributedTracingEnabled;

@@ -133,13 +133,13 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
 
             LiveMetricsUsageTrackingTransport.TrackRequest(
                 Azure.Core.RequestMethod.Post,
-                new Uri("https://example.test/QuickPulseService.svc/ping"));
+                "/QuickPulseService.svc/ping");
             Assert.Equal(DistroFeature.None, DistroSdkStatsUsage.Features);
             Assert.Empty(CollectObservableMeasurements());
 
             LiveMetricsUsageTrackingTransport.TrackRequest(
                 Azure.Core.RequestMethod.Post,
-                new Uri("https://example.test/QuickPulseService.svc/post"));
+                "/QuickPulseService.svc/post");
             Assert.Equal(DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
             Assert.Empty(CollectObservableMeasurements());
 
@@ -150,16 +150,57 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.Equal(0, measurement.tags["type"]);
         }
 
-        [Fact]
-        public void AzureMonitorOptions_WiresLiveMetricsUsageTrackingTransport()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AzureMonitorOptions_OnlyWrapsTransportWhenLiveMetricsIsEnabled(bool enableLiveMetrics)
         {
-            var options = new AzureMonitorOptions();
+            var options = new AzureMonitorOptions { EnableLiveMetrics = enableLiveMetrics };
             var exporterOptions =
                 new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions();
+            var originalTransport = exporterOptions.Transport;
 
             options.SetValueToExporterOptions(exporterOptions);
 
-            Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+            if (enableLiveMetrics)
+            {
+                var trackingTransport =
+                    Assert.IsType<LiveMetricsUsageTrackingTransport>(exporterOptions.Transport);
+                Assert.Same(originalTransport, trackingTransport.InnerTransport);
+            }
+            else
+            {
+                Assert.Same(originalTransport, exporterOptions.Transport);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AzureMonitorOptions_DisabledLiveMetricsPreservesTransportPrecedence(bool configureOptionsTransport)
+        {
+            using var optionsTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            using var exporterTransport = new Azure.Core.Pipeline.HttpClientTransport(
+                new System.Net.Http.HttpClient());
+            var options = new AzureMonitorOptions { EnableLiveMetrics = false };
+            if (configureOptionsTransport)
+            {
+                options.Transport = optionsTransport;
+            }
+
+            var exporterOptions =
+                new Azure.Monitor.OpenTelemetry.Exporter.AzureMonitorExporterOptions
+                {
+                    Transport = exporterTransport,
+                };
+
+            options.SetValueToExporterOptions(exporterOptions);
+
+            Assert.False(exporterOptions.EnableLiveMetrics);
+            Assert.Same(
+                configureOptionsTransport ? optionsTransport : exporterTransport,
+                exporterOptions.Transport);
         }
 
         [Fact]

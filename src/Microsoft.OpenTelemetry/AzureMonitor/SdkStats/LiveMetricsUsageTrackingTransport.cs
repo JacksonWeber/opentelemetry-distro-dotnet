@@ -12,6 +12,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
     /// Delegating Azure Core transport that recognizes Live Metrics active-collection posts.
     /// Ping traffic only means Live Metrics is enabled; the service sends the SDK into the
     /// post state only while a user is actively subscribed in the portal.
+    /// Detection uses outgoing requests only, without polling or additional network calls.
     /// Request inspection stops once Live Metrics has been observed in this process.
     /// </summary>
     internal sealed class LiveMetricsUsageTrackingTransport : HttpPipelineTransport
@@ -42,10 +43,10 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
 
         public override void Update(HttpPipelineTransportOptions options) => _inner.Update(options);
 
-        internal static void TrackRequest(RequestMethod method, Uri uri)
+        internal static void TrackRequest(RequestMethod method, string path)
         {
             if (method == RequestMethod.Post
-                && string.Equals(uri.AbsolutePath, LiveMetricsPostPath, StringComparison.OrdinalIgnoreCase))
+                && string.Equals(path, LiveMetricsPostPath, StringComparison.OrdinalIgnoreCase))
             {
                 DistroSdkStatsUsage.MarkFeatureInUse(DistroFeature.LiveMetrics);
             }
@@ -58,7 +59,11 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.SdkStats
                 return;
             }
 
-            TrackRequest(message.Request.Method, message.Request.Uri.ToUri());
+            var request = message.Request;
+            if (request.Method == RequestMethod.Post)
+            {
+                TrackRequest(RequestMethod.Post, request.Uri.Path);
+            }
         }
     }
 }

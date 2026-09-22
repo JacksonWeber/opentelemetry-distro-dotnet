@@ -17,6 +17,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
     {
         [Theory]
         [InlineData("POST", "/QuickPulseService.svc/post", true)]
+        [InlineData("POST", "/QuickPulseService.svc/post?ikey=test", true)]
         [InlineData("POST", "/quickpulseservice.svc/POST", true)]
         [InlineData("POST", "/QuickPulseService.svc/ping", false)]
         [InlineData("GET", "/QuickPulseService.svc/post", false)]
@@ -59,6 +60,35 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
         }
 
         [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Process_NonPostRequest_DoesNotInspectUri(bool async)
+        {
+            DistroSdkStatsUsage.ResetForTesting();
+            var inner = new RecordingTransport();
+            var transport = new LiveMetricsUsageTrackingTransport(inner);
+            var request = new RecordingRequest { Method = RequestMethod.Get };
+            using var message = new HttpMessage(request, new ResponseClassifier());
+            request.Uri.Reset(new Uri("https://example.test/QuickPulseService.svc/post"));
+            var uriReadsBeforeRequest = request.UriReads;
+
+            if (async)
+            {
+                await transport.ProcessAsync(message);
+            }
+            else
+            {
+                transport.Process(message);
+            }
+
+            Assert.Equal(uriReadsBeforeRequest, request.UriReads);
+            Assert.Equal(DistroFeature.None, DistroSdkStatsUsage.Features);
+            Assert.Same(message, inner.LastMessage);
+            Assert.Equal(async ? 0 : 1, inner.SyncCalls);
+            Assert.Equal(async ? 1 : 0, inner.AsyncCalls);
+        }
+
+        [Theory]
         [InlineData(false, false)]
         [InlineData(false, true)]
         [InlineData(true, false)]
@@ -89,6 +119,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             Assert.True(request.UriReads > uriReadsBeforePost);
             Assert.Equal(DistroFeature.AgentFramework | DistroFeature.LiveMetrics, DistroSdkStatsUsage.Features);
             var uriReadsAfterPost = request.UriReads;
+            var methodReadsAfterPost = request.MethodReads;
             if (useAnotherTransport)
             {
                 transport = new LiveMetricsUsageTrackingTransport(inner);
@@ -98,6 +129,7 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             await transport.ProcessAsync(message);
 
             Assert.Equal(uriReadsAfterPost, request.UriReads);
+            Assert.Equal(methodReadsAfterPost, request.MethodReads);
             Assert.Same(message, inner.LastMessage);
             Assert.Equal(async ? 1 : 2, inner.SyncCalls);
             Assert.Equal(async ? 2 : 1, inner.AsyncCalls);
@@ -184,6 +216,18 @@ namespace Microsoft.OpenTelemetry.AzureMonitor.Tests.SdkStats
             private readonly Request _inner = HttpClientTransport.Shared.CreateRequest();
 
             internal int UriReads { get; private set; }
+
+            internal int MethodReads { get; private set; }
+
+            public override RequestMethod Method
+            {
+                get
+                {
+                    MethodReads++;
+                    return _inner.Method;
+                }
+                set => _inner.Method = value;
+            }
 
             public override RequestUriBuilder Uri
             {

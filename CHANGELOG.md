@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Report Live Metrics usage in Feature SDK Stats after the first active-collection request and stop inspecting subsequent requests, and correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor.
+- Report Live Metrics usage in Feature SDK Stats from the first outgoing active-collection request, without polling or adding network requests. Skip tracking when Live Metrics is disabled and stop inspecting requests after first use. Correlate the Agent Framework feature with instrumentation detected by the existing bounded activity processor.
+- **Breaking change:** Reduce default HTTP client metric volume while retaining request latency, count, and failure dimensions through `http.client.request.duration`. Other `System.Net.Http` metrics are now opt-in through OpenTelemetry `AddView`; dashboards and alerts using them must [explicitly enable collection](docs/customization.md#http-client-metrics). HTTP dependency tracing and server metrics are unchanged. No new public API is introduced.
 
 ## 1.2.0-beta.1 - 2026-09-18
 - Update `Azure.Monitor.OpenTelemetry.Exporter` to 1.10.0-beta.1, which makes multi-endpoint routing available: one exporter can send telemetry to several Application Insights components. It is off by default and enabled with the `Azure.Monitor.OpenTelemetry.EnableMultiEndpointRouting` switch, after which each item is sent to the component named by its `microsoft.instrumentation_key` and `microsoft.ingestion_endpoint` attributes, and an item carrying neither is dropped rather than sent to the application's own component.

@@ -17,6 +17,11 @@
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)target\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
+  <!-- Package versions -->
+  <PropertyGroup>
+    <MicrosoftOpenTelemetryPackageVersion Condition="'$(MSBuildProjectName)' != 'Microsoft.OpenTelemetry.Package.Tests'">1.3.0-beta.1</MicrosoftOpenTelemetryPackageVersion>
+  </PropertyGroup>
+
   <!-- Source Link & deterministic builds -->
   <PropertyGroup>
     <Deterministic>true</Deterministic>

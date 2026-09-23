@@ -10,7 +10,7 @@
 
     <!-- NuGet packaging -->
     <PackageId>Microsoft.OpenTelemetry</PackageId>
-    <Version>1.2.0-beta.1</Version>
+    <Version>$(MicrosoftOpenTelemetryPackageVersion)</Version>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>See CHANGELOG.md for release notes.</PackageReleaseNotes>
@@ -60,5 +60,35 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.Agents.A365.Observability.Contracts\Microsoft.Agents.A365.Observability.Contracts.csproj" />
+    <ProjectReference Include="..\Microsoft.Agents.A365.Observability.Etw\Microsoft.Agents.A365.Observability.Etw.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeStandaloneEtwSdkBuildOutputs</TargetsForTfmSpecificBuildOutput>
+    <TargetsForTfmSpecificDebugSymbolsInPackage>$(TargetsForTfmSpecificDebugSymbolsInPackage);IncludeStandaloneEtwSdkBuildOutputs</TargetsForTfmSpecificDebugSymbolsInPackage>
+  </PropertyGroup>
+
+  <Target Name="IncludeStandaloneEtwSdkBuildOutputs">
+    <ItemGroup>
+      <_StandaloneEtwSdkBuildOutput Include="$(TargetDir)Microsoft.Agents.A365.Observability.Etw.dll;
+                                                $(TargetDir)Microsoft.Agents.A365.Observability.Etw.xml;
+                                                $(TargetDir)Microsoft.Agents.A365.Observability.Etw.pdb" />
+      <BuildOutputInPackage Include="@(_StandaloneEtwSdkBuildOutput)"
+                            Condition="'%(_StandaloneEtwSdkBuildOutput.Extension)' == '.dll'
+                              or '%(_StandaloneEtwSdkBuildOutput.Extension)' == '.xml'">
+        <FinalOutputPath>%(_StandaloneEtwSdkBuildOutput.FullPath)</FinalOutputPath>
+        <TargetPath>%(_StandaloneEtwSdkBuildOutput.Filename)%(_StandaloneEtwSdkBuildOutput.Extension)</TargetPath>
+      </BuildOutputInPackage>
+      <TfmSpecificDebugSymbolsFile Include="@(_StandaloneEtwSdkBuildOutput)"
+                                   Condition="'%(_StandaloneEtwSdkBuildOutput.Extension)' == '.pdb'">
+        <FinalOutputPath>%(_StandaloneEtwSdkBuildOutput.FullPath)</FinalOutputPath>
+        <TargetPath>%(_StandaloneEtwSdkBuildOutput.Filename)%(_StandaloneEtwSdkBuildOutput.Extension)</TargetPath>
+        <TargetFramework>$(TargetFramework)</TargetFramework>
+      </TfmSpecificDebugSymbolsFile>
+    </ItemGroup>
+  </Target>
 
 </Project>

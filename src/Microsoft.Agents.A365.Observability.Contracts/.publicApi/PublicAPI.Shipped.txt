@@ -1,0 +1,383 @@
+#nullable enable
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolType.Datastore -> string!
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolType.Extension -> string!
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolType.Function -> string!
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity.None = "none" -> string!
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity.Low = "low" -> string!
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity.Medium = "medium" -> string!
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity.High = "high" -> string!
+const Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity.Critical = "critical" -> string!
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.LlmInput -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.LlmOutput -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.ToolCall -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.ToolDefinition -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.MemoryStore -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.MemoryRetrieve -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.KnowledgeQuery -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.KnowledgeResult -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static readonly Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.Message -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+abstract Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.Name.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.Attributes.get -> System.Collections.Generic.IDictionary<string!, object?>!
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.BaseData(System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, string? spanKind = null, string? traceId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.Duration.get -> System.TimeSpan
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.EndTime.get -> System.DateTimeOffset?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.EndTime.set -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.ParentSpanId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.SpanId.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.SpanKind.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StartTime.get -> System.DateTimeOffset?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StartTime.set -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.ToDictionary() -> System.Collections.Generic.Dictionary<string!, object?>!
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.TraceId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.BaseDataBuilder() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteInferenceDataBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteInferenceDataBuilder.ExecuteInferenceDataBuilder() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteToolDataBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteToolDataBuilder.ExecuteToolDataBuilder() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.InvokeAgentDataBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.InvokeAgentDataBuilder.InvokeAgentDataBuilder() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.OutputDataBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.OutputDataBuilder.OutputDataBuilder() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteInferenceData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteInferenceData.ExecuteInferenceData(System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, string? traceId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteToolData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteToolData.ExecuteToolData(System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, string? spanKind = null, string? traceId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.InvokeAgentData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.InvokeAgentData.InvokeAgentData(System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, string? spanKind = null, string? traceId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.OutputData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.OutputData.OutputData(System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, string? traceId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentBlueprintId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentClientIP.get -> System.Net.IPAddress?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentDescription.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentDetails(string? agentId = null, string? agentName = null, string? agentDescription = null, string? agenticUserId = null, string? agenticUserEmail = null, string? agentBlueprintId = null, string? tenantId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType? agentType = null, System.Net.IPAddress? agentClientIP = null, string? agentPlatformId = null, string? providerName = null, string? agentVersion = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgenticUserEmail.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgenticUserId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentPlatformId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentType.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.AgentVersion.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.Deconstruct(out string? agentId, out string? agentName, out string? agentDescription, out string? agenticUserId, out string? agenticUserEmail, out string? agentBlueprintId, out Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType? agentType, out string? tenantId, out System.Net.IPAddress? agentClientIP, out string? agentPlatformId, out string? agentVersion) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.ProviderName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.TenantId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.CopilotStudio = 5 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.DeclarativeAgent = 3 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.EntraEmbodied = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.EntraNonEmbodied = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.Foundry = 4 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType.MicrosoftCopilot = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails.CallerAgentDetails.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails.CallerDetails(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails? userDetails = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails? callerAgentDetails = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails.UserDetails.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Channel(string? name, string? link = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Deconstruct(out string? name, out string? link) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Link.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Name.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.Deconstruct(out Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType operationName, out string! model, out string! providerName, out int? inputTokens, out int? outputTokens, out string![]? finishReasons, out string? responseId) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.FinishReasons.get -> string![]?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.InferenceCallDetails(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType operationName, string! model, string! providerName, int? inputTokens = null, int? outputTokens = null, string![]? finishReasons = null, string? responseId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.InputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.Model.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.OperationName.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.OutputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.ProviderName.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.ResponseId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType.Chat = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType.GenerateContent = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType.TextCompletion = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceOperationType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.Endpoint.get -> System.Uri?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart.BlobPart(string! modality, string! content, string? mimeType = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart.Content.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart.MimeType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart.Modality.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.BlobPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage.ChatMessage(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole role, System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.IMessagePart!>! parts, string? name = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage.Name.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage.Parts.get -> System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.IMessagePart!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage.Role.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart.FileId.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart.FilePart(string! modality, string! fileId, string? mimeType = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart.MimeType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart.Modality.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FilePart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason.ContentFilter = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason.Error = 4 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason.Length = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason.Stop = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason.ToolCall = 3 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.FinishReason
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.GenericPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.GenericPart.Data.get -> System.Collections.Generic.IDictionary<string!, object!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.GenericPart.GenericPart(string! type, System.Collections.Generic.IDictionary<string!, object!>? data = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.GenericPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.IMessagePart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.IMessagePart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.InputMessages
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.InputMessages.InputMessages(System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage!>! messages) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.InputMessages.Messages.get -> System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ChatMessage!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole.Assistant = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole.System = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole.Tool = 3 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole.User = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality.Audio = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality.Image = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality.Video = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.Modality
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessage
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessage.FinishReason.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessage.OutputMessage(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.MessageRole role, System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.IMessagePart!>! parts, string? name = null, string? finishReason = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessages
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessages.Messages.get -> System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessage!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessages.OutputMessages(System.Collections.Generic.IReadOnlyList<Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessage!>! messages) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ReasoningPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ReasoningPart.Content.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ReasoningPart.ReasoningPart(string! content) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ReasoningPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart.Id.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart.Name.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart.ServerToolCall.get -> System.Collections.Generic.IDictionary<string!, object!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart.ServerToolCallPart(string! name, System.Collections.Generic.IDictionary<string!, object!>! serverToolCall, string? id = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallResponsePart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallResponsePart.Id.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallResponsePart.ServerToolCallResponse.get -> System.Collections.Generic.IDictionary<string!, object!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallResponsePart.ServerToolCallResponsePart(System.Collections.Generic.IDictionary<string!, object!>! serverToolCallResponse, string? id = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ServerToolCallResponsePart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.TextPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.TextPart.Content.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.TextPart.TextPart(string! content) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.TextPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart.Arguments.get -> object?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart.Id.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart.Name.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart.ToolCallRequestPart(string! name, string? id = null, object? arguments = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallRequestPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallResponsePart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallResponsePart.Id.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallResponsePart.Response.get -> object?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallResponsePart.ToolCallResponsePart(string? id = null, object? response = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.ToolCallResponsePart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart.MimeType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart.Modality.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart.Type.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart.Uri.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.UriPart.UriPart(string! modality, string! uri, string? mimeType = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource.Gateway = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource.MCPServer = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource.SDK = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.OperationSource
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Channel.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Content.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.ConversationId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Deconstruct(out string? content, out string? sessionId, out Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel, out string? conversationId) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.InputContent.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.InputMessages?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.OperationSource.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Request(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.InputMessages! inputContent, string? sessionId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, string? conversationId = null, string? operationSource = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Request(string? content = null, string? sessionId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, string? conversationId = null, string? operationSource = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.SessionId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Messages.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.OutputContent.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessages?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Response(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages.OutputMessages! outputContent) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Response(System.Collections.Generic.IDictionary<string!, object!>! toolResultObject) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Response(System.Collections.Generic.IReadOnlyList<string!>? messages = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.ToolResultObject.get -> System.Collections.Generic.IDictionary<string!, object!>?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.EndTime.get -> System.DateTimeOffset?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.ParentContext.get -> System.Diagnostics.ActivityContext?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.SpanDetails(System.Diagnostics.ActivityKind? spanKind = null, System.Diagnostics.ActivityContext? parentContext = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, System.Diagnostics.ActivityLink[]? spanLinks = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.SpanKind.get -> System.Diagnostics.ActivityKind?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.SpanLinks.get -> System.Diagnostics.ActivityLink[]?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.SpanDetails.StartTime.get -> System.DateTimeOffset?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary.BlockAction.get -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary.Diagnostics.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary.Reason.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary.ReasonCode.get -> int
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ThreatDiagnosticsSummary.ThreatDiagnosticsSummary(bool blockAction, int reasonCode, string! reason, string? diagnostics = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Arguments.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ArgumentsObject.get -> System.Collections.Generic.IDictionary<string!, object!>?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Deconstruct(out string! toolName, out string? arguments, out string? toolCallId, out string? description, out string? toolType, out System.Uri? endpoint) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Description.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Endpoint.get -> System.Uri?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ToolCallDetails(string! toolName, string? arguments, string? toolCallId = null, string? description = null, string? toolType = null, System.Uri? endpoint = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ToolCallDetails(string! toolName, System.Collections.Generic.IDictionary<string!, object!>! argumentsObject, string? toolCallId = null, string? description = null, string? toolType = null, System.Uri? endpoint = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ToolCallId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ToolName.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.ToolType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolType.ToolType() -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails? other) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.UserClientIP.get -> System.Net.IPAddress?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.UserDetails(string? userId = null, string? userEmail = null, string? userName = null, System.Net.IPAddress? userClientIP = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.UserEmail.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.UserId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.UserName.get -> string?
+override Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteInferenceData.Name.get -> string!
+override Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteToolData.Name.get -> string!
+override Microsoft.Agents.A365.Observability.Runtime.DTOs.InvokeAgentData.Name.get -> string!
+override Microsoft.Agents.A365.Observability.Runtime.DTOs.OutputData.Name.get -> string!
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.UserDetails.GetHashCode() -> int
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddAgentDetails(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddCallerAgentDetails(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails? callerAgentDetails) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddCallerDetails(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddChannelAttributes(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddEndpointDetails(System.Collections.Generic.IDictionary<string!, object?>! attributes, System.Uri? endpoint) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddExtraAttributes(System.Collections.Generic.IDictionary<string!, object?>! attributes, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddIfNotNull(System.Collections.Generic.IDictionary<string!, object?>! attributes, string! key, object? value) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddInputMessagesAttributes(System.Collections.Generic.IDictionary<string!, object?>! attributes, string![]? messages) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddOutputMessagesAttributes(System.Collections.Generic.IDictionary<string!, object?>! attributes, string![]? messages) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddRequestDetails(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request? request) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StatusCode.get -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StatusCode.set -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StatusMessage.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.BaseData.StatusMessage.set -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.SpanStatusBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus.Code.get -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus.Message.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus.SpanStatus() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus.SpanStatus(Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode code = Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode.Unset, string? message = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode.Error = 2 -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode.Ok = 1 -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode.Unset = 0 -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatusCode
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ApplyGuardrailDataBuilder.Build(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails! guardrailDetails, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails, string! conversationId, string! parentSpanId, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails = null, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes = null, string? spanKind = null, string? traceId = null, System.Exception? error = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.ApplyGuardrailData!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.ApplyStatus(T! data, System.Exception? error) -> T!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteInferenceDataBuilder.Build(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InferenceCallDetails! inferenceCallDetails, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails, string! conversationId, string![]? inputMessages = null, string![]? outputMessages = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, string? thoughtProcess = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails = null, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes = null, string? traceId = null, System.Exception? error = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteInferenceData!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ExecuteToolDataBuilder.Build(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.ToolCallDetails! toolCallDetails, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails, string! conversationId, string? responseContent = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails = null, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes = null, string? spanKind = null, string? traceId = null, System.Exception? error = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.ExecuteToolData!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.InvokeAgentDataBuilder.Build(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails! invokeAgentScopeDetails, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails, string! conversationId, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Request? request = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails = null, string![]? inputMessages = null, string![]? outputMessages = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes = null, string? spanKind = null, string? traceId = null, System.Exception? error = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.InvokeAgentData!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.OutputDataBuilder.Build(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.AgentDetails! agentDetails, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Response! response, string? conversationId = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Channel? channel = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.CallerDetails? callerDetails = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? parentSpanId = null, System.Collections.Generic.IDictionary<string!, object?>? extraAttributes = null, string? traceId = null, System.Exception? error = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.OutputData!
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.SpanStatusBuilder.FromError(System.Exception? error, System.Collections.Generic.IDictionary<string!, object?>? attributes = null) -> Microsoft.Agents.A365.Observability.Runtime.DTOs.SpanStatus
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType.Allow = 0 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType.Audit = 1 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType.Deny = 2 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType.Modify = 3 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType.Warn = 4 -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GuardrailDetails(string! targetType, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType decisionType, string? guardianName = null, string? guardianId = null, string? guardianProviderName = null, string? guardianVersion = null, string? targetId = null, string? decisionReason = null, string? decisionCode = null, string? policyId = null, string? policyName = null, string? policyVersion = null, string? contentInputHash = null, bool? contentModified = null, string? externalEventId = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.TargetType.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.DecisionType.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDecisionType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GuardianName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GuardianId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GuardianProviderName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GuardianVersion.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.TargetId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.DecisionReason.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.DecisionCode.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.PolicyId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.PolicyName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.PolicyVersion.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.ContentInputHash.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.ContentModified.get -> bool?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.ExternalEventId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails? other) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailDetails.GetHashCode() -> int
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.GuardrailFinding(string! riskCategory, string! riskSeverity, string? policyDecisionType = null, string? policyId = null, string? policyName = null, string? policyVersion = null, double? riskScore = null, string![]? riskMetadata = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.RiskCategory.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.RiskSeverity.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.PolicyDecisionType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.PolicyId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.PolicyName.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.PolicyVersion.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.RiskScore.get -> double?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.RiskMetadata.get -> string![]?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding? other) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailFinding.GetHashCode() -> int
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailRiskSeverity
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.GuardrailTargetType(string! value) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.Value.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType other) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.GetHashCode() -> int
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.ToString() -> string!
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.implicit operator Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType(string! value) -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.implicit operator string!(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType type) -> string!
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.operator ==(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType left, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType right) -> bool
+static Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.operator !=(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType left, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType right) -> bool
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GuardrailTargetType.GuardrailTargetType() -> void
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ApplyGuardrailData
+Microsoft.Agents.A365.Observability.Runtime.DTOs.ApplyGuardrailData.ApplyGuardrailData(string! parentSpanId, System.Collections.Generic.IDictionary<string!, object?>? attributes = null, System.DateTimeOffset? startTime = null, System.DateTimeOffset? endTime = null, string? spanId = null, string? spanKind = null, string? traceId = null) -> void
+override Microsoft.Agents.A365.Observability.Runtime.DTOs.ApplyGuardrailData.Name.get -> string!
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ApplyGuardrailDataBuilder
+Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.ApplyGuardrailDataBuilder.ApplyGuardrailDataBuilder() -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddSdkAttributes(System.Collections.Generic.IDictionary<string!, object?>! attributes) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddRequestParameters(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters? requestParameters) -> void
+static Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders.BaseDataBuilder<T>.AddResponseParameters(System.Collections.Generic.IDictionary<string!, object?>! attributes, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters? responseParameters) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.GenAiRequestParameters(string? model = null, int? seed = null, int? choiceCount = null, double? frequencyPenalty = null, int? maxTokens = null, double? presencePenalty = null, string![]? stopSequences = null, double? temperature = null, double? topP = null, string? dataSourceId = null, string? outputType = null, string? systemInstructions = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.Model.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.Seed.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.ChoiceCount.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.FrequencyPenalty.get -> double?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.MaxTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.PresencePenalty.get -> double?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.StopSequences.get -> string![]?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.Temperature.get -> double?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.TopP.get -> double?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.DataSourceId.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.OutputType.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.SystemInstructions.get -> string?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters? other) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters.GetHashCode() -> int
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.GenAiResponseParameters(string![]? finishReasons = null, int? inputTokens = null, int? outputTokens = null, int? cacheCreationInputTokens = null, int? cacheReadInputTokens = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.FinishReasons.get -> string![]?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.InputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.OutputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.CacheCreationInputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.CacheReadInputTokens.get -> int?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.Equals(Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters? other) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.Equals(object? obj) -> bool
+override Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters.GetHashCode() -> int
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.InvokeAgentScopeDetails(System.Uri? endpoint) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.InvokeAgentScopeDetails(System.Uri? endpoint = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters? requestParameters = null, Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters? responseParameters = null) -> void
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.RequestParameters.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiRequestParameters?
+Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.InvokeAgentScopeDetails.ResponseParameters.get -> Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.GenAiResponseParameters?

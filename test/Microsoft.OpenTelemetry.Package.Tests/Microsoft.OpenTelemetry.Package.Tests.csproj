@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Microsoft.OpenTelemetry.Package.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <MicrosoftOpenTelemetryPackageVersion Condition="'$(MicrosoftOpenTelemetryPackageVersion)' == ''">1.2.0-validation</MicrosoftOpenTelemetryPackageVersion>
+    <PackageValidationArtifactsPath>$(BaseIntermediateOutputPath)package-validation\$(Configuration)\</PackageValidationArtifactsPath>
+    <DistroPackageSourcePath>$(PackageValidationArtifactsPath)distro-source\</DistroPackageSourcePath>
+    <EtwPackageSourcePath>$(PackageValidationArtifactsPath)etw-source\</EtwPackageSourcePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ContractsProjectPath>$(MSBuildProjectDirectory)\..\..\src\Microsoft.Agents.A365.Observability.Contracts\Microsoft.Agents.A365.Observability.Contracts.csproj</ContractsProjectPath>
+    <EtwProjectPath>$(MSBuildProjectDirectory)\..\..\src\Microsoft.Agents.A365.Observability.Etw\Microsoft.Agents.A365.Observability.Etw.csproj</EtwProjectPath>
+    <DistroProjectPath>$(MSBuildProjectDirectory)\..\..\src\Microsoft.OpenTelemetry\Microsoft.OpenTelemetry.csproj</DistroProjectPath>
+  </PropertyGroup>
+
+  <Target Name="PreparePackageValidationArtifacts" BeforeTargets="VSTest">
+    <RemoveDir Directories="$(PackageValidationArtifactsPath)" />
+    <MakeDir Directories="$(PackageValidationArtifactsPath)" />
+
+    <MSBuild
+      Projects="$(ContractsProjectPath);$(EtwProjectPath);$(DistroProjectPath)"
+      Targets="Restore"
+      BuildInParallel="false"
+      RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained"
+      Properties="Configuration=$(Configuration);NoBuild=false;MicrosoftOpenTelemetryPackageVersion=$(MicrosoftOpenTelemetryPackageVersion)" />
+    <MSBuild
+      Projects="$(ContractsProjectPath);$(EtwProjectPath);$(DistroProjectPath)"
+      Targets="Build"
+      BuildInParallel="false"
+      RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained"
+      Properties="Configuration=$(Configuration);NoBuild=false;MicrosoftOpenTelemetryPackageVersion=$(MicrosoftOpenTelemetryPackageVersion)" />
+    <MSBuild
+      Projects="$(ContractsProjectPath);$(EtwProjectPath);$(DistroProjectPath)"
+      Targets="Pack"
+      BuildInParallel="false"
+      RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained"
+      Properties="Configuration=$(Configuration);NoBuild=true;PackageOutputPath=$(PackageValidationArtifactsPath);MicrosoftOpenTelemetryPackageVersion=$(MicrosoftOpenTelemetryPackageVersion)" />
+
+    <MakeDir Directories="$(DistroPackageSourcePath);$(EtwPackageSourcePath)" />
+    <Copy
+      SourceFiles="$(PackageValidationArtifactsPath)Microsoft.OpenTelemetry.$(MicrosoftOpenTelemetryPackageVersion).nupkg;$(PackageValidationArtifactsPath)Microsoft.Agents.A365.Observability.Contracts.$(MicrosoftOpenTelemetryPackageVersion).nupkg"
+      DestinationFolder="$(DistroPackageSourcePath)" />
+    <Copy
+      SourceFiles="$(PackageValidationArtifactsPath)Microsoft.Agents.A365.Observability.Etw.$(MicrosoftOpenTelemetryPackageVersion).nupkg;$(PackageValidationArtifactsPath)Microsoft.Agents.A365.Observability.Contracts.$(MicrosoftOpenTelemetryPackageVersion).nupkg"
+      DestinationFolder="$(EtwPackageSourcePath)" />
+
+    <WriteLinesToFile
+      File="$(OutDir)package-validation-path.txt"
+      Lines="$(PackageValidationArtifactsPath)"
+      Overwrite="true" />
+    <WriteLinesToFile
+      File="$(OutDir)package-validation-version.txt"
+      Lines="$(MicrosoftOpenTelemetryPackageVersion)"
+      Overwrite="true" />
+  </Target>
+</Project>

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Agent365 observability shared contracts, DTOs, builders, and runtime helpers.</Description>
+    <AssemblyTitle>Microsoft Agent365 Observability Contracts</AssemblyTitle>
+    <RootNamespace>Microsoft.Agents.A365.Observability</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Observability.Contracts</AssemblyName>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <PackageId>Microsoft.Agents.A365.Observability.Contracts</PackageId>
+    <Version>$(MicrosoftOpenTelemetryPackageVersion)</Version>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/microsoft/opentelemetry-distro-dotnet</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/microsoft/opentelemetry-distro-dotnet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\NOTICE.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+    <PackageReference Include="System.Text.Json" />
+    <AdditionalFiles Include=".publicApi\PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include=".publicApi\PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+</Project>

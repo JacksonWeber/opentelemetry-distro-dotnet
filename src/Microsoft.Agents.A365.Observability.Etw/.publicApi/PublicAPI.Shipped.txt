@@ -1,0 +1,5 @@
+#nullable enable
+Microsoft.Agents.A365.Observability.Runtime.Etw.EtwEventSource
+Microsoft.Agents.A365.Observability.Runtime.Etw.EtwEventSource.LogJson(string! message) -> void
+Microsoft.Agents.A365.Observability.Runtime.Etw.EtwEventSource.SpanStop(string! name, string! spanId, string! traceId, string! parentSpanId, string! content) -> void
+static readonly Microsoft.Agents.A365.Observability.Runtime.Etw.EtwEventSource.Log -> Microsoft.Agents.A365.Observability.Runtime.Etw.EtwEventSource!

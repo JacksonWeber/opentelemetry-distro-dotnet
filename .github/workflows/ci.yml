@@ -82,7 +82,10 @@ jobs:
         run: dotnet build Microsoft.OpenTelemetry.slnx --no-restore --configuration Release
 
       - name: Pack
-        run: dotnet pack src/Microsoft.OpenTelemetry/Microsoft.OpenTelemetry.csproj --no-build --configuration Release --output ./packages
+        run: |
+          dotnet pack src/Microsoft.Agents.A365.Observability.Contracts/Microsoft.Agents.A365.Observability.Contracts.csproj --no-build --configuration Release --output ./packages
+          dotnet pack src/Microsoft.Agents.A365.Observability.Etw/Microsoft.Agents.A365.Observability.Etw.csproj --no-build --configuration Release --output ./packages
+          dotnet pack src/Microsoft.OpenTelemetry/Microsoft.OpenTelemetry.csproj --no-build --configuration Release --output ./packages
 
       - name: Upload NuGet package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

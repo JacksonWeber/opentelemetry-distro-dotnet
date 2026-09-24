@@ -3,7 +3,11 @@
     {
       "src": [
         {
-          "files": ["src/Microsoft.OpenTelemetry/Microsoft.OpenTelemetry.csproj"],
+          "files": [
+            "src/Microsoft.OpenTelemetry/Microsoft.OpenTelemetry.csproj",
+            "src/Microsoft.Agents.A365.Observability.Contracts/Microsoft.Agents.A365.Observability.Contracts.csproj",
+            "src/Microsoft.Agents.A365.Observability.Etw/Microsoft.Agents.A365.Observability.Etw.csproj"
+          ],
           "src": "."
         }
       ],
